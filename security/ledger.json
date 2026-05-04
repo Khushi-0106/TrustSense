@@ -1,1 +1,16 @@
-[]
+[
+    {
+        "device_id": "Device123",
+        "timestamp": "2026-05-04T22:22:12.554517",
+        "trust_score": 73,
+        "wipe_level": "Advanced Multi-pass",
+        "hash": "cb5a366def9a638f59e4490af6fedab94b5c97b0ad9f5c13a4ef6f219a7b725d"
+    },
+    {
+        "device_id": "Device123",
+        "timestamp": "2026-05-04T22:44:15.612063",
+        "trust_score": 46,
+        "wipe_level": "Advanced Multi-pass",
+        "hash": "a17cb05f2c2d58144d7bb01f533892520fb398a03daf5ec7be474e4cfadfc85d"
+    }
+]

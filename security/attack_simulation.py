@@ -11,7 +11,6 @@ class ForensicSimulator:
         }
 
     def simulate_recovery_attempt(self, target_path, chunk_size=4096):
-        """Attempts to recover file fragments from the target path."""
         findings = {sig_name: 0 for sig_name in self.signatures}
         try:
             with open(target_path, "rb") as f:
@@ -21,7 +20,7 @@ class ForensicSimulator:
                             findings[sig_name] += 1
             return self._format_results(findings)
         except Exception as e:
-            return f"Error: {e}"
+            return f"Error: {e}", False
 
     def _format_results(self, findings):
         total = sum(findings.values())
@@ -30,3 +29,22 @@ class ForensicSimulator:
             report += f"{k}: {'FOUND' if v > 0 else 'EMPTY'} ({v} fragments)\n"
         report += f"FINAL VERDICT: {'SECURE' if total == 0 else 'UNSAFE'}\n"
         return report, total == 0
+
+
+# ✅ THIS MUST BE OUTSIDE THE CLASS
+def simulate_attack():
+    simulator = ForensicSimulator()
+
+    test_file = "test_drive.bin"
+
+    # Create dummy file for demo
+    if not os.path.exists(test_file):
+        with open(test_file, "wb") as f:
+            f.write(b"RandomData123456")
+
+    report, is_secure = simulator.simulate_recovery_attempt(test_file)
+
+    return {
+        "report": report,
+        "is_secure": is_secure
+    }
