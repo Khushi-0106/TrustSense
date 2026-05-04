@@ -1,3 +1,4 @@
+
 import random
 
 def scan_data():
@@ -24,3 +25,4 @@ def scan_data():
     }
 
     return scan_result
+
