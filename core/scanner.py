@@ -1,28 +1,36 @@
+import os
 
-import random
+def scan_data(path):
+    hidden = 0
+    temp = 0
+    sensitive = 0
+    files_list = []
 
-def scan_data():
-    """
-    Simulates a file system scan and returns a formatted result dictionary.
-    """
-    hidden = random.randint(0, 10)
-    temp = random.randint(0, 10)
-    sensitive = random.randint(0, 5)
+    for root, dirs, files in os.walk(path):
+        for file in files:
+            full_path = os.path.join(root, file)
+            files_list.append(full_path)
 
-    # Risk Assessment Logic
+            if file.startswith('.'):
+                hidden += 1
+
+            if file.endswith(('.tmp', '.log')):
+                temp += 1
+
+            if file.endswith(('.txt', '.pdf', '.docx')):
+                sensitive += 1
+
     if sensitive > 3:
         risk = "High"
-    elif temp > 3:
+    elif sensitive > 1:
         risk = "Medium"
     else:
         risk = "Low"
 
-    scan_result = {
+    return {
         "hidden_files": hidden,
         "temp_files": temp,
         "sensitive_files": sensitive,
-        "risk_level": risk
+        "risk_level": risk,
+        "files": files_list[:10]
     }
-
-    return scan_result
-

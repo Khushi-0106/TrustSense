@@ -12,5 +12,187 @@
         "trust_score": 46,
         "wipe_level": "Advanced Multi-pass",
         "hash": "a17cb05f2c2d58144d7bb01f533892520fb398a03daf5ec7be474e4cfadfc85d"
+    },
+    {
+        "device_id": "Device123",
+        "timestamp": "2026-05-04T22:55:24.081836",
+        "trust_score": 88,
+        "wipe_level": "Advanced Multi-pass",
+        "hash": "3a5cc4e4d9862e6050c9ce60399e627cfb5c535d76f3a8d03abc63315ed12c99"
+    },
+    {
+        "device_id": "ASSET-2026-IND",
+        "timestamp": "2026-05-04T23:24:31.732498",
+        "trust_score": 99,
+        "wipe_level": "DoD 3-pass",
+        "hash": "ca74b20cd6ceff682f171caa9db12177133a78d0a6cba0da21de84018cdc94da"
+    },
+    {
+        "device_id": "ASSET-2026-IND",
+        "timestamp": "2026-05-04T23:24:47.627661",
+        "trust_score": 94,
+        "wipe_level": "DoD 3-pass",
+        "hash": "6dee470f62bcf0915983e2812b05dae5a537832f450bd69084d87cc84ec85af8"
+    },
+    {
+        "device_id": "ASSET-IND-2026-BENGALURU",
+        "timestamp": "2026-05-04T23:31:21.692752",
+        "trust_score": 99,
+        "wipe_level": "DoD 3-pass",
+        "hash": "2f7a98f5618bf54d5de48882ef509c40e43e263d9428f87521934dc7cfba5cbf"
+    },
+    {
+        "device_id": "TS-IND-2026-ASSET-01",
+        "timestamp": "2026-05-04T23:38:39.572121",
+        "trust_score": 94,
+        "wipe_level": "Advanced Multi-pass",
+        "hash": "fb39a1c1d1f0866fea49edca7907da2671b1176358b6a1aa0b08b782a29f9c21"
+    },
+    {
+        "device_id": "TS-IND-2026-ASSET-01",
+        "timestamp": "2026-05-04T23:38:45.964493",
+        "trust_score": 94,
+        "wipe_level": "Advanced Multi-pass",
+        "hash": "aa1576afda9eceb6eb5d15378f651a46912cda65098a283466254df1371bca48"
+    },
+    {
+        "device_id": "ASSET-2026-IND",
+        "timestamp": "2026-05-04T23:43:48.231992",
+        "trust_score": 99,
+        "wipe_level": "DoD 3-pass",
+        "hash": "b6a914a936debc6afa2d40d843995dd77f38e077abcc5f471d5174939d300ee0"
+    },
+    {
+        "device_id": "ASSET-2026-IND",
+        "timestamp": "2026-05-04T23:49:17.766105",
+        "trust_score": 97,
+        "wipe_level": "Advanced Multi-pass",
+        "hash": "a0ee7a283a63ffd9a26b4d7eeddedad6b09f1fd8b698818e80c2dbae968f290e"
+    },
+    {
+        "device_id": "ASSET-2026-IND",
+        "timestamp": "2026-05-04T23:58:16.564753",
+        "trust_score": 99,
+        "wipe_level": "Advanced Multi-pass",
+        "hash": "e227b2b08800c2b0b3b0446027c763fd202415ecdce5b08bf1ca1105c9932a3d"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 00:27:33",
+        "trust_score": 99,
+        "wipe_level": "Basic",
+        "hash": "b85cbe3a44be7e6148c99fc4cbae7d00e255ffe10626c0800ba31c864b99a09a"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 00:32:47",
+        "trust_score": 99,
+        "wipe_level": "Basic",
+        "hash": "3ac2ffa5dc9238b54801a499d611240d1ae046dff8ba3b8806254a5a19ad7061"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 00:36:06",
+        "trust_score": 99,
+        "wipe_level": "DoD 3-pass",
+        "hash": "08ce06359fca71adf883b74c419ab5ee2b42309292ead4ee72125f1e93d99729"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 00:50:33",
+        "trust_score": 99,
+        "wipe_level": "Basic",
+        "hash": "16bead1b5232944bc8590cd75f9744908200b661f3b4428055d6e8041569ec5a"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 01:00:21",
+        "trust_score": 99,
+        "wipe_level": "Basic",
+        "hash": "faef1469f3c07f1b1b70251d1a22dac19bfc5f43f43f102806dcfc171a6398e9"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 01:06:39",
+        "trust_score": 99,
+        "wipe_level": "Basic",
+        "hash": "1d67ba95cc349194c9bcde75aa020142aad172b815886f919d1d29edeea3a30f"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 01:27:47",
+        "trust_score": 99,
+        "wipe_level": "Basic",
+        "hash": "708c2fbb2b55a5f14f5200e0268bd25409e543d180fe06ba5369ebe432b54a1a"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 01:30:55",
+        "trust_score": 99,
+        "wipe_level": "Basic",
+        "hash": "7ef8263798e21549127351112571e1a7a00d2419dbb3574240ae14f86873c17d"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 01:32:50",
+        "trust_score": 99,
+        "wipe_level": "Basic",
+        "hash": "1f12aaa011fcdf1daa121029aee6fb9f5a808a2f04c1de0a7e58a948003d2035"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 01:43:01",
+        "trust_score": 99,
+        "wipe_level": "Basic",
+        "hash": "1ee4f660cc53dcd9ffe1d791defe84d68b9f2ef2c0091e97914282454b9df065"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 01:52:15",
+        "trust_score": 100,
+        "wipe_level": "Advanced Multi-pass",
+        "hash": "3437416b724eed1e0601d9c3d0dd016954f148589156d80ee6d488ef520823c2"
+    },
+    {
+        "device_id": "my laptop",
+        "timestamp": "2026-05-05 01:55:18",
+        "trust_score": 100,
+        "wipe_level": "Basic",
+        "hash": "685283b3478f36e7b19a76471b513039eeaf616a439391d9512fb5364478a894"
+    },
+    {
+        "device_id": "my laptop",
+        "timestamp": "2026-05-05 01:57:57",
+        "trust_score": 100,
+        "wipe_level": "Basic",
+        "hash": "8f277cd9e979227e14f88e644b9c547aaf5061b8a50ca08abc5610cb52bd4adb"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 01:58:44",
+        "trust_score": 100,
+        "wipe_level": "Basic",
+        "hash": "f75fb815c46b9b5f7e40c909a87fdab58ca5c70e34d52d8440ea52a846a73917"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 01:59:30",
+        "trust_score": 100,
+        "wipe_level": "Basic",
+        "hash": "59da08787666d5118127543eb8a5632dc8d64efc15f75de88b4798a7fff58a59"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 02:01:13",
+        "trust_score": 100,
+        "wipe_level": "Basic",
+        "hash": "bdbb8a31e5e985935412f67fe692772b7cc89a103c2e2877f1b3ec4556d37c77"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 02:04:44",
+        "trust_score": 100,
+        "wipe_level": "Advanced Multi-pass",
+        "hash": "59a0abc10948d81c7286d8e808ca65a82a99687f6e6c5f33265a20a328ba026e"
     }
 ]

@@ -2,20 +2,16 @@ import hashlib
 from datetime import datetime
 
 def generate_certificate(device_id, trust_score, wipe_level):
-    """
-    Generates a secure JSON certificate for device verification.
-    """
-    timestamp = datetime.now().isoformat()
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    # Prepare data for hashing
-    # Format: device_id + timestamp + trust_score + wipe_level
-    raw_string = f"{device_id}{timestamp}{trust_score}{wipe_level}"
-    cert_hash = hashlib.sha256(raw_string.encode()).hexdigest()
+    # FEATURE 2: Create a unique hash for the tamper-proof demo
+    raw_payload = f"{device_id}{timestamp}{trust_score}{wipe_level}"
+    cert_hash = hashlib.sha256(raw_payload.encode()).hexdigest()
     
     return {
-        "device_id": str(device_id),
+        "device_id": device_id,
         "timestamp": timestamp,
-        "trust_score": int(trust_score),
-        "wipe_level": str(wipe_level),
+        "trust_score": trust_score,
+        "wipe_level": wipe_level,
         "hash": cert_hash
     }

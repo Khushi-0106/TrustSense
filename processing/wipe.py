@@ -1,20 +1,29 @@
-import time
+import os
 
-def simulate_wipe(wipe_level):
-    time.sleep(1.5)
+def overwrite_file(file_path):
+    try:
+        with open(file_path, "r+b") as f:
+            f.write(os.urandom(os.path.getsize(file_path)))
+    except:
+        pass
 
-    # Normalize input
-    level = wipe_level.lower()
+def simulate_wipe(folder_path, wipe_level="Basic"):
+    deleted = []
 
-    if "dod" in level:
-        details = "Multi-pass DoD 5220.22-M wipe completed. Data overwritten 3 times."
-    elif "advanced" in level or "gutmann" in level:
-        details = "Advanced deep wipe completed. Gutmann-style passes applied."
-    else:
-        details = "Quick wipe completed. Temporary files cleared."
+    for root, dirs, files in os.walk(folder_path):
+        for file in files:
+            full_path = os.path.join(root, file)
+
+            overwrite_file(full_path)
+
+            try:
+                os.remove(full_path)
+                deleted.append(full_path)
+            except:
+                pass
 
     return {
         "status": "completed",
-        "wipe_level": wipe_level,
-        "details": details
+        "deleted_count": len(deleted),
+        "details": f"{len(deleted)} files wiped"
     }
