@@ -1,5 +1,7 @@
 import streamlit as st
+import time
 
+# === IMPORT BACKEND ===
 from core.scanner import scan_data
 from core.recommender import recommend_wipe
 from processing.wipe import simulate_wipe
@@ -8,52 +10,136 @@ from processing.certificate import generate_certificate
 from security.verification import store_certificate, verify_certificate
 from security.attack_simulation import simulate_attack
 
-st.set_page_config(page_title="TrustSense", layout="centered")
+# === PAGE CONFIG ===
+st.set_page_config(page_title="TrustSense", layout="wide")
 
-st.title("🔐 TrustSense - Secure Data Wiping System")
+# === STYLING ===
+st.markdown("""
+<style>
+.big-title {
+    font-size: 42px;
+    font-weight: bold;
+}
+.safe {
+    color: #00ff88;
+    font-size: 28px;
+    font-weight: bold;
+}
+.danger {
+    color: #ff4b4b;
+    font-size: 28px;
+    font-weight: bold;
+}
+</style>
+""", unsafe_allow_html=True)
 
-st.markdown("### Turn device resale into a **trusted process**")
+# === HEADER ===
+st.markdown('<p class="big-title">🔐 TrustSense</p>', unsafe_allow_html=True)
+st.markdown("### Device Trust Certification Platform")
 
-# Run button
+# === SIDEBAR ===
+st.sidebar.title("🧭 Process Flow")
+st.sidebar.info("""
+1. 🔍 Scan System  
+2. 🧠 AI Recommendation  
+3. 🧹 Secure Wipe  
+4. 📊 Trust Score  
+5. 📄 Certificate  
+6. ⚠️ Attack Simulation  
+""")
+
+# === INPUTS ===
+file_path = st.text_input("📁 Enter Device Path", "C:\\TestFolder")
+device_id = st.text_input("💻 Device ID", "TS-UNIT-01")
+
+# === BUTTON ===
 if st.button("🚀 Run Full Security Check"):
 
-    st.subheader("🔍 Step 1: Scanning System")
-    scan_result = scan_data()
+    # STEP 1: SCAN
+    st.subheader("🔍 Scan Result")
+    scan_result = scan_data(file_path)
     st.json(scan_result)
 
-    st.subheader("🧠 Step 2: AI Wipe Recommendation")
-    wipe_plan = recommend_wipe(scan_result)
-    st.success(f"Recommended: {wipe_plan['wipe_level']}")
+    # SHOW FILES
+    st.subheader("📂 Files Detected")
+    if scan_result["files"]:
+        for f in scan_result["files"]:
+            st.write(f)
+    else:
+        st.write("No files found.")
 
-    st.subheader("🧹 Step 3: Secure Wipe Simulation")
-    wipe_status = simulate_wipe(wipe_plan["wipe_level"])
+    # STEP 2: RECOMMEND
+    st.subheader("🧠 AI Recommendation")
+    wipe_plan = recommend_wipe(scan_result)
+    st.success(f"Recommended Method: {wipe_plan['wipe_level']}")
+
+    # STEP 3: TRUST SCORE BEFORE
+    st.subheader("📊 Trust Score (Before)")
+    before_score = calculate_trust_score(scan_result)
+    st.metric("Before Wipe Score", f"{before_score['trust_score']}/100")
+
+    # STEP 4: WIPE
+    st.subheader("🧹 Executing Secure Wipe...")
+
+    progress = st.progress(0)
+    for i in range(100):
+        time.sleep(0.01)
+        progress.progress(i + 1)
+
+    wipe_status = simulate_wipe(file_path, wipe_plan["wipe_level"])
     st.info(wipe_status["details"])
 
-    st.subheader("📊 Step 4: Trust Score")
-    trust_score = calculate_trust_score(scan_result, wipe_plan)
-    st.metric("Trust Score", f"{trust_score['trust_score']}/100")
+    # STEP 5: RE-SCAN
+    st.subheader("🔁 After Wipe Scan")
+    new_scan = scan_data(file_path)
+    st.json(new_scan)
 
-    st.subheader("📄 Step 5: Certificate Generation")
+    # STEP 6: TRUST SCORE AFTER
+    st.subheader("📊 Trust Score (After)")
+    after_score = calculate_trust_score(new_scan)
+    st.metric("After Wipe Score", f"{after_score['trust_score']}/100")
+
+    # IMPROVEMENT
+    improvement = after_score["trust_score"] - before_score["trust_score"]
+    st.success(f"🔥 Trust Score Improved by +{improvement}")
+
+    # STEP 7: CERTIFICATE
+    st.subheader("📄 Trust Certificate")
+
     cert = generate_certificate(
-        "Device123",
-        trust_score["trust_score"],
+        device_id,
+        after_score["trust_score"],
         wipe_plan["wipe_level"]
     )
-    st.json(cert)
 
-    st.subheader("🔐 Step 6: Verification")
     store_certificate(cert)
-    valid = verify_certificate(cert)
-    st.success(f"Certificate Verified: {valid}")
+    verified = verify_certificate(cert)
 
-    st.subheader("⚠️ Step 7: Attack Simulation")
+    st.markdown(f"""
+    **Device ID:** {device_id}  
+    **Trust Score:** {after_score['trust_score']}/100  
+    **Wipe Method:** {wipe_plan['wipe_level']}  
+    **Verification:** {"✅ Verified" if verified else "❌ Failed"}  
+    """)
+
+    # STEP 8: ATTACK SIMULATION
+    st.subheader("⚠️ Attack Simulation")
+
     attack = simulate_attack()
-    st.text(attack["report"])
 
-    if attack["is_secure"]:
-        st.success("✅ Device is SAFE for resale")
+    if "report" in attack:
+        st.text(attack["report"])
     else:
-        st.error("❌ Data still recoverable")
+        st.error("Attack simulation failed")
 
+    # FINAL STATUS
+    st.subheader("🏁 Final Status")
+
+    if attack.get("is_secure", False):
+        st.markdown('<p class="safe">🟢 SAFE FOR RESALE</p>', unsafe_allow_html=True)
+    else:
+        st.markdown('<p class="danger">🔴 DATA STILL RECOVERABLE</p>', unsafe_allow_html=True)
+
+# FOOTER
 st.markdown("---")
-st.caption("Built for Hackathon Demo 🚀")
+st.caption("TrustSense • Hackathon Project • AI + Cybersecurity 🚀")
