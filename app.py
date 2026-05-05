@@ -204,12 +204,13 @@ with st.container():
 if st.button("🚀 INITIATE SANITIZATION PROTOCOL", use_container_width=True, type="primary"):
     st.session_state.stage = "OPTIONS"
     st.session_state.protocol_finished = False
-    st.session_state.wipe_confirmed = False
+    if "initial_scan" in st.session_state:
+        del st.session_state.initial_scan # Reset scan on new initiate
 
 if st.session_state.get("stage") == "OPTIONS":
     st.markdown("<br/>", unsafe_allow_html=True)
     
-    # Run initial scan if not already done
+    # Run initial scan if not already cached
     if "initial_scan" not in st.session_state:
         with st.spinner("Executing Deep Heuristic Scan..."):
             time.sleep(1)
@@ -225,21 +226,21 @@ if st.session_state.get("stage") == "OPTIONS":
     scan_result = st.session_state.initial_scan["scan_result"]
     wipe_plan = st.session_state.initial_scan["wipe_plan"]
     
-    # --- NEW: OPTIONAL BACKUP UI BLOCK ---
-    st.markdown("### 🛡️ Pre-Wipe Actions")
-    st.info("Recommendation: " + wipe_plan["wipe_level"])
+    # --- PRE-WIPE ACTION CENTER ---
+    st.markdown("### 🛡️ Pre-Wipe Action Center")
+    st.info(f"Recommended Protocol: **{wipe_plan['wipe_level']}**")
     
     col_b1, col_b2 = st.columns(2)
     with col_b1:
         if st.button("🚀 Proceed with Secure Wipe"):
             st.session_state.do_backup = False
-            st.session_state.wipe_confirmed = True
             st.session_state.stage = "WIPING"
+            st.rerun()
     with col_b2:
         if st.button("📂 Backup Sensitive Files then Wipe"):
             st.session_state.do_backup = True
-            st.session_state.wipe_confirmed = True
             st.session_state.stage = "WIPING"
+            st.rerun()
 
 if st.session_state.get("stage") == "WIPING":
     scan_result = st.session_state.initial_scan["scan_result"]

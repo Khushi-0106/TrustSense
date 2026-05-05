@@ -159,5 +159,47 @@
         "trust_score": 100,
         "wipe_level": "Basic",
         "hash": "cbb8e555e66e6a610d038028e22a86d5108a32124847863fa08432c1d97edf42"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 08:09:19.437442",
+        "trust_score": 100,
+        "wipe_level": "Basic",
+        "hash": "71d43f9bc986197c68ac7738a90b67fbbf09e2400075263c2cc20289ab5c8b55"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 08:19:19.910668",
+        "trust_score": 100,
+        "wipe_level": "Basic",
+        "hash": "f43e04832af88151618337826e536f7c6114eb9283eecf73bbc875c3a52924e0"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 08:21:40.953511",
+        "trust_score": 100,
+        "wipe_level": "Basic",
+        "hash": "691b3502a70cec78100ff1e17675f6ac8fbd210bffa45b5a5cb534a94b8ff701"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 08:22:37.935767",
+        "trust_score": 100,
+        "wipe_level": "Basic",
+        "hash": "4ad93f36f32aff038bfe4f567f7886eaf6b633544ec6fcb22c3c935cea1c5087"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 08:26:00.769184",
+        "trust_score": 100,
+        "wipe_level": "Basic",
+        "hash": "9d6faa2ed799f0e366b46453ac9e02d62a9e0e401709862d511be7f2e1a60347"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 08:27:47.198839",
+        "trust_score": 100,
+        "wipe_level": "Basic",
+        "hash": "16a92fd462d8747955e1126823554ca72a793e95bad53749a796dd46f417fa1a"
     }
 ]

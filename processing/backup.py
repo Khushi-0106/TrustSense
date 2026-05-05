@@ -19,13 +19,6 @@ def perform_backup(scan_result, device_id, source_root):
     moved_count = 0
     sensitive_extensions = ('.txt', '.pdf', '.docx')
     
-    # We need full paths to move files. 
-    # scan_result['files'] only has clean names.
-    # We should re-scan or use the source_root to find them.
-    # The requirement says "Use scan_result['files']", but those are just basenames.
-    # I will walk the source_root and match basenames that are in scan_result['files'] 
-    # and have the sensitive extensions.
-    
     files_to_match = set(scan_result.get("files", []))
     
     for root, dirs, files in os.walk(source_root):
