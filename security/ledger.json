@@ -229,5 +229,12 @@
         "trust_score": 100,
         "wipe_level": "Advanced Multi-pass",
         "hash": "25c5f236e6bfa16b80e57fe430f940edc70f4882f399d4dcca3b5aa1bf57fe64"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 04:06:39.566801",
+        "trust_score": 100,
+        "wipe_level": "Basic",
+        "hash": "8494430f2273e0756bf6710e95f43e605f63e2771ebb03675352568c005c098e"
     }
 ]
