@@ -229,5 +229,26 @@
         "trust_score": 100,
         "wipe_level": "Advanced Multi-pass",
         "hash": "25c5f236e6bfa16b80e57fe430f940edc70f4882f399d4dcca3b5aa1bf57fe64"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-04 23:58:34.986214",
+        "trust_score": 80,
+        "wipe_level": "Advanced Multi-pass",
+        "hash": "56559ab897c665f4ac0c22ac2acb23daf0ed68de957599357b803f05e00418b6"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-04 23:58:42.474230",
+        "trust_score": 100,
+        "wipe_level": "DoD 3-pass",
+        "hash": "85616117357361087f49c35f83f235c1e884ab5dbf8ae47c6a6999aa34a739fe"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 04:00:55.019140",
+        "trust_score": 100,
+        "wipe_level": "Basic",
+        "hash": "ad40a0eeae920d05305728c7950b11c18e0569fe0fd10b79ecbb8f1a66ef0327"
     }
 ]

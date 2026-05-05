@@ -1,0 +1,54 @@
+[
+  {
+    "data": {
+      "device": "TS-01",
+      "score": 100,
+      "wipe": "Basic",
+      "risk": "Low",
+      "time": "2026-05-04 22:03:12",
+      "hash": "b7d6d4a209a66a3aea40efe04718ea330307fedfa311c849149cec4ea471a899",
+      "status": "SAFE"
+    },
+    "prev_hash": "0",
+    "hash": "f7787a78067c6b38d7b029da80f32641cc56ecf1897833a3576a08ce1099cba1"
+  },
+  {
+    "data": {
+      "device": "TS-01",
+      "score": 100,
+      "wipe": "Basic",
+      "risk": "Low",
+      "time": "2026-05-04 22:03:51",
+      "hash": "a997d2e1b75045556e6efd3df2d4a39313169843cd12ae3756c30ecf8f95d85a",
+      "status": "SAFE"
+    },
+    "prev_hash": "f7787a78067c6b38d7b029da80f32641cc56ecf1897833a3576a08ce1099cba1",
+    "hash": "90a6de8f87c1c7a0fd27589fff75716d0a2353a1eb87670d017876404c8ea045"
+  },
+  {
+    "data": {
+      "device": "TS-01",
+      "score": 100,
+      "wipe": "Basic",
+      "risk": "Low",
+      "time": "2026-05-04 22:03:54",
+      "hash": "8534b80850d3897dc924bc742a1bdb5f5ef65f32e06ebaf0597811c7430d058e",
+      "status": "SAFE"
+    },
+    "prev_hash": "90a6de8f87c1c7a0fd27589fff75716d0a2353a1eb87670d017876404c8ea045",
+    "hash": "9199c96afddf7c46a55563d5d29b0778aad2034ea02f6ad57b3fe0d741293a90"
+  },
+  {
+    "data": {
+      "device": "TS-01",
+      "score": 100,
+      "wipe": "Basic",
+      "risk": "Low",
+      "time": "2026-05-04 22:04:20",
+      "hash": "4d333727890d31603dc2dc4329ed5fc9bf506bf4f32aa775dec5ed1d6824fd06",
+      "status": "SAFE"
+    },
+    "prev_hash": "9199c96afddf7c46a55563d5d29b0778aad2034ea02f6ad57b3fe0d741293a90",
+    "hash": "d7d8cf56cc6ae1d7b1cb8746b5a3c210efeea696b6aa92232b2b78e9023050a6"
+  }
+]
