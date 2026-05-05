@@ -13,6 +13,7 @@ def overwrite_file(file_path, wipe_level):
         pass
 
 def simulate_wipe(folder_path, wipe_level="Basic"):
+    folder_path = folder_path.strip()
     deleted_files = []
     deleted_folders = 0
 
@@ -35,6 +36,30 @@ def simulate_wipe(folder_path, wipe_level="Basic"):
                 deleted_folders += 1
             except:
                 pass
+
+    # Finally, attempt to remove the root folder itself
+    import time
+    import subprocess
+    try:
+        if os.path.exists(folder_path):
+            # Small delay to allow file handles to close
+            time.sleep(0.5)
+            try:
+                shutil.rmtree(folder_path)
+                deleted_folders += 1
+            except:
+                # If shutil fails, try the Windows-specific 'rd' command for aggressive deletion
+                try:
+                    # /s removes all directories and files, /q is quiet mode
+                    subprocess.run(['cmd', '/c', 'rd', '/s', '/q', folder_path], check=True)
+                    deleted_folders += 1
+                except:
+                    # Last fallback
+                    if os.path.exists(folder_path):
+                        os.rmdir(folder_path)
+                        deleted_folders += 1
+    except:
+        pass
 
     return {
         "status": "completed",

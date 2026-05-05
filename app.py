@@ -4,6 +4,7 @@ import os
 import pandas as pd
 import platform
 
+
 from core.scanner import scan_data
 from core.recommender import recommend_wipe
 from processing.wipe import simulate_wipe
@@ -12,6 +13,11 @@ from processing.certificate import generate_certificate
 from processing.pdf_certificate import generate_pdf_certificate
 from security.verification import store_certificate, verify_certificate
 from security.attack_simulation import simulate_attack
+from datetime import datetime
+import streamlit.components.v1 as components
+from ui_components import get_passport_html, get_verification_portal_html, get_qr_base64, get_local_ip
+from processing.neo_pdf import generate_neo_pdf
+from processing.backup import perform_backup
 
 st.set_page_config(page_title="TrustSense+ Platform", layout="wide", page_icon="🛡️")
 
@@ -20,6 +26,30 @@ if "scan_data" not in st.session_state:
     st.session_state.scan_data = None
 if "protocol_finished" not in st.session_state:
     st.session_state.protocol_finished = False
+if "stage" not in st.session_state:
+    st.session_state.stage = "IDLE"
+
+# --- NEW: ROUTING LOGIC FOR QR SCANS ---
+query_params = st.query_params
+if "verify" in query_params:
+    st.markdown("""
+        <style>
+            .stApp { background-color: #000000 !important; }
+            header { visibility: hidden; }
+            footer { visibility: hidden; }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    verify_data = {
+        "device_id": query_params.get("id", "UNKNOWN"),
+        "hash": query_params.get("hash", "UNKNOWN")
+    }
+    
+    # Render the Live Verification Portal as a full-screen component
+    portal_html = get_verification_portal_html(verify_data, tamper_detected=False)
+    components.html(portal_html, height=1000, scrolling=True)
+    st.stop() # Stop execution here to only show the portal
+# ---------------------------------------
 
 # Custom CSS for Neon Green/Teal Glassmorphism, Collapsible Cards, and Animations
 st.markdown("""
@@ -60,7 +90,7 @@ st.markdown("""
         
         .hero-subtitle {
             font-size: 1.2rem;
-            color: #10b981; /* Neon green accent */
+            color: #B2F2BB; /* Pastel green accent */
             letter-spacing: 2px;
             text-transform: uppercase;
         }
@@ -123,26 +153,26 @@ st.markdown("""
             text-anchor: middle;
             font-weight: bold;
         }
-        .green .circle { stroke: #10b981; }
-        .red .circle { stroke: #ef4444; }
+        .green .circle { stroke: #B2F2BB; }
+        .red .circle { stroke: #FFC9C9; }
 
         .badge-safe {
-            background-color: rgba(16, 185, 129, 0.15);
-            color: #10b981;
+            background-color: rgba(178, 242, 187, 0.15);
+            color: #B2F2BB;
             padding: 12px 20px;
             border-radius: 8px;
-            border: 1px solid #10b981;
+            border: 1px solid #B2F2BB;
             font-weight: bold;
             text-align: center;
             font-size: 1.2rem;
         }
         
         .badge-danger {
-            background-color: rgba(239, 68, 68, 0.15);
-            color: #ef4444;
+            background-color: rgba(255, 201, 201, 0.15);
+            color: #FFC9C9;
             padding: 12px 20px;
             border-radius: 8px;
-            border: 1px solid #ef4444;
+            border: 1px solid #FFC9C9;
             font-weight: bold;
             text-align: center;
             font-size: 1.2rem;
@@ -172,18 +202,60 @@ with st.container():
     st.markdown('</div>', unsafe_allow_html=True)
 
 if st.button("🚀 INITIATE SANITIZATION PROTOCOL", use_container_width=True, type="primary"):
+    st.session_state.stage = "OPTIONS"
     st.session_state.protocol_finished = False
-    
+    st.session_state.wipe_confirmed = False
+
+if st.session_state.get("stage") == "OPTIONS":
     st.markdown("<br/>", unsafe_allow_html=True)
     
-    # Run logic and store in session state
-    with st.spinner("Executing Deep Heuristic Scan..."):
-        time.sleep(1)
-        scan_result = scan_data(file_path)
-        before_score = calculate_trust_score(scan_result)
-        
-    wipe_plan = recommend_wipe(scan_result)
+    # Run initial scan if not already done
+    if "initial_scan" not in st.session_state:
+        with st.spinner("Executing Deep Heuristic Scan..."):
+            time.sleep(1)
+            scan_result = scan_data(file_path)
+            before_score = calculate_trust_score(scan_result)
+            wipe_plan = recommend_wipe(scan_result)
+            st.session_state.initial_scan = {
+                "scan_result": scan_result,
+                "before_score": before_score,
+                "wipe_plan": wipe_plan
+            }
     
+    scan_result = st.session_state.initial_scan["scan_result"]
+    wipe_plan = st.session_state.initial_scan["wipe_plan"]
+    
+    # --- NEW: OPTIONAL BACKUP UI BLOCK ---
+    st.markdown("### 🛡️ Pre-Wipe Actions")
+    st.info("Recommendation: " + wipe_plan["wipe_level"])
+    
+    col_b1, col_b2 = st.columns(2)
+    with col_b1:
+        if st.button("🚀 Proceed with Secure Wipe"):
+            st.session_state.do_backup = False
+            st.session_state.wipe_confirmed = True
+            st.session_state.stage = "WIPING"
+    with col_b2:
+        if st.button("📂 Backup Sensitive Files then Wipe"):
+            st.session_state.do_backup = True
+            st.session_state.wipe_confirmed = True
+            st.session_state.stage = "WIPING"
+
+if st.session_state.get("stage") == "WIPING":
+    scan_result = st.session_state.initial_scan["scan_result"]
+    before_score = st.session_state.initial_scan["before_score"]
+    wipe_plan = st.session_state.initial_scan["wipe_plan"]
+    
+    if st.session_state.get("do_backup", False):
+        with st.spinner("Backing up sensitive forensic assets..."):
+            moved_count, backup_path = perform_backup(scan_result, device_id, file_path)
+            if moved_count > 0:
+                st.success(f"✔ Backup completed successfully")
+                st.info(f"✔ {moved_count} sensitive files stored at: {backup_path}")
+            else:
+                st.warning("No sensitive files found. Proceeding with wipe.")
+    
+    # Automatically continue with wipe logic
     with st.expander("⚡ Eradication Progress", expanded=True):
         progress_bar = st.progress(0, text="Initializing override sequences...")
         for i in range(100):
@@ -226,6 +298,16 @@ if st.button("🚀 INITIATE SANITIZATION PROTOCOL", use_container_width=True, ty
             with open(pdf_file, "rb") as f:
                 pdf_bytes = f.read()
 
+        # Generate Neo-Brutalist PDF
+        pdf_data = {
+            "device_id": device_id,
+            "hash": cert["hash"],
+            "trust_score": after_score["trust_score"],
+            "files_sensitive": scan_result["sensitive_files"],
+            "files_safe": scan_result["total_files"] - scan_result["sensitive_files"]
+        }
+        neo_pdf_bytes = generate_neo_pdf(pdf_data)
+        
     # Save to session state
     st.session_state.scan_result = scan_result
     st.session_state.before_score = before_score
@@ -236,7 +318,8 @@ if st.button("🚀 INITIATE SANITIZATION PROTOCOL", use_container_width=True, ty
     st.session_state.attack = attack
     st.session_state.cert = cert
     st.session_state.status = status
-    st.session_state.pdf_bytes = pdf_bytes
+    st.session_state.pdf_bytes = pdf_bytes # Old PDF
+    st.session_state.neo_pdf_bytes = neo_pdf_bytes # New Neo-Brutalist PDF
     st.session_state.pdf_file = pdf_file
     st.session_state.protocol_finished = True
 
@@ -317,9 +400,36 @@ if st.session_state.protocol_finished:
     with st.expander("📜 Stage 4: Premium Certification Passport", expanded=True):
         st.markdown("Your Cryptographic Security Passport has been generated with a verifiable QR code.")
         
-        if st.session_state.pdf_bytes:
+        # Prepare data for the Neo-Brutalist Passport
+        local_ip = get_local_ip()
+        verify_url = f"http://{local_ip}:8501/?verify=true&id={device_id}&hash={st.session_state.cert['hash']}"
+        qr_base64 = get_qr_base64(verify_url)
+        
+        passport_data = {
+            "trust_score": st.session_state.after_score["trust_score"],
+            "device_id": device_id,
+            "date": datetime.now().strftime("%Y-%m-%d"),
+            "files_sensitive": st.session_state.scan_result["sensitive_files"],
+            "files_safe": st.session_state.scan_result["total_files"] - st.session_state.scan_result["sensitive_files"],
+            "hash": st.session_state.cert["hash"],
+            "qr_base64": qr_base64
+        }
+        
+        passport_html = get_passport_html(passport_data)
+        components.html(passport_html, height=400, scrolling=True)
+        
+        if st.session_state.neo_pdf_bytes:
             st.download_button(
-                label="⬇️ DOWNLOAD OFFICIAL SECURITY PASSPORT (PDF)",
+                label="⬇️ DOWNLOAD OFFICIAL SECURITY PASSPORT (NEO-BRUTALIST PDF)",
+                data=st.session_state.neo_pdf_bytes,
+                file_name=f"{device_id}_Security_Passport.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+                type="primary"
+            )
+        elif st.session_state.pdf_bytes:
+            st.download_button(
+                label="⬇️ DOWNLOAD OFFICIAL SECURITY PASSPORT (STANDARD PDF)",
                 data=st.session_state.pdf_bytes,
                 file_name=f"{device_id}_Security_Passport.pdf",
                 mime="application/pdf",
@@ -328,8 +438,18 @@ if st.session_state.protocol_finished:
             )
         else:
             st.error("PDF generation encountered a critical error.")
+
+    # 5. LIVE VERIFICATION SIMULATION
+    with st.expander("🌐 Stage 5: Live Verification Portal Simulation", expanded=False):
+        st.write("This is what a buyer or auditor sees when they scan the QR code on your passport.")
+        
+        tamper_sim = st.toggle("Simulate Tamper Detection (Hash Mismatch)")
+        
+        if st.button("🔗 OPEN LIVE VERIFICATION PORTAL"):
+            portal_html = get_verification_portal_html(passport_data, tamper_detected=tamper_sim)
+            components.html(portal_html, height=800, scrolling=True)
             
-    # 5. EXECUTION LOG
+    # 6. EXECUTION LOG
     with st.expander("📋 Execution Trace Logs", expanded=False):
         st.text(f"[SCAN COMPLETE] Found {st.session_state.scan_result['total_files']} files, {st.session_state.scan_result['total_folders']} folders.")
         st.text(f"[ANALYSIS GENERATED] Risk: {st.session_state.scan_result['risk_level']} | AI Rec: {st.session_state.wipe_plan['wipe_level']}")

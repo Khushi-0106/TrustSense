@@ -1,5 +1,28 @@
 import os
+import re
 from collections import defaultdict
+
+SENSITIVE_KEYWORDS = [
+    'password', 'secret', 'api_key', 'access_token', 'credentials',
+    'confidential', 'private_key', 'ssn', 'social security',
+    'bank account', 'credit card', 'internal only', 'proprietary'
+]
+
+def is_content_sensitive(file_path):
+    """
+    Checks if the file content contains sensitive keywords.
+    Only scans the first 8KB to keep it fast.
+    """
+    try:
+        # Avoid scanning very large binary files if possible, but check if it's text-like
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read(8192).lower()
+            for keyword in SENSITIVE_KEYWORDS:
+                if keyword in content:
+                    return True
+    except:
+        pass
+    return False
 
 def scan_data(path):
     hidden = 0
@@ -44,14 +67,26 @@ def scan_data(path):
             if ext in ['.tmp', '.log', '.bak', '.swp']:
                 temp += 1
 
-            if ext in ['.txt', '.pdf', '.docx', '.csv', '.xlsx', '.json', '.yaml', '.key', '.pem']:
+            # NEW: Content-based sensitivity detection
+            is_sensitive = False
+            
+            # Check by extension first (legacy but still useful for speed)
+            if ext in ['.key', '.pem', '.env', '.config']:
+                is_sensitive = True
+            
+            # Deep content scan for text/code files
+            if not is_sensitive and ext in ['.txt', '.pdf', '.docx', '.csv', '.xlsx', '.json', '.yaml', '.py', '.js', '.sh', '.bat']:
+                if is_content_sensitive(full_path):
+                    is_sensitive = True
+            
+            if is_sensitive:
                 sensitive += 1
                 
-            # High risk executable/script types
-            if ext in ['.exe', '.sh', '.bat', '.ps1', '.py', '.js']:
-                sensitive += 2 # weighted higher for risk
+            # High risk executable/script types (still flagged by type as well)
+            if ext in ['.exe', '.sh', '.bat', '.ps1']:
+                sensitive += 1 # extra weight
 
-    if sensitive > 10 or file_types.get('.exe', 0) > 0:
+    if sensitive > 10:
         risk = "Critical"
     elif sensitive > 5:
         risk = "High"
@@ -69,5 +104,5 @@ def scan_data(path):
         "max_depth": max_depth,
         "file_types": dict(file_types),
         "risk_level": risk,
-        "files": files_list[:50] # Top 50 clean names
+        "files": files_list[:50]
     }
