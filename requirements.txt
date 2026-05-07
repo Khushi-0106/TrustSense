@@ -1,0 +1,8 @@
+streamlit
+pandas
+qrcode
+xhtml2pdf
+requests
+# add below if not installed
+soupselect2
+pillow 
