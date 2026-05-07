@@ -1,8 +1,9 @@
 streamlit
 pandas
+numpy
 qrcode
 xhtml2pdf
 requests
-# add below if not installed
-soupselect2
-pillow 
+beautifulsoup4
+Pillow
+python-dateutil
