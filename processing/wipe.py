@@ -48,10 +48,14 @@ def simulate_wipe(folder_path, wipe_level="Basic"):
                 shutil.rmtree(folder_path)
                 deleted_folders += 1
             except:
-                # If shutil fails, try the Windows-specific 'rd' command for aggressive deletion
+                # If shutil fails, try OS-specific aggressive deletion
                 try:
-                    # /s removes all directories and files, /q is quiet mode
-                    subprocess.run(['cmd', '/c', 'rd', '/s', '/q', folder_path], check=True)
+                    if os.name == 'nt':
+                        # Windows /s removes all directories and files, /q is quiet mode
+                        subprocess.run(['cmd', '/c', 'rd', '/s', '/q', folder_path], check=True)
+                    else:
+                        # Linux/Mac aggressive remove
+                        subprocess.run(['rm', '-rf', folder_path], check=True)
                     deleted_folders += 1
                 except:
                     # Last fallback
