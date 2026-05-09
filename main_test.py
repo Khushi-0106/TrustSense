@@ -10,20 +10,22 @@ def run_demo():
     print("=== TrustSense+ Backend Initialized ===")
     
     # 1. Setup Sandbox (Live Interaction)
-    print(f"\n[Step 1] Creating Live Sandbox on Desktop...")
-    setup_live_sandbox()
+    print(f"\n[Step 1] Creating Live Sandbox...")
+    sandbox_path = setup_live_sandbox()
     
     # 2. Scan
-    scan = scan_data()
-    print(f"[Step 2] Scan Result: {scan}")
+    scan = scan_data(sandbox_path)
+    print(f"[Step 2] Scan Result: Found {scan['total_files']} files, {scan['sensitive_files']} sensitive.")
     
     # 3. Recommend & Wipe
     rec = recommend_wipe(scan)
-    wipe_res = simulate_wipe(rec["wipe_level"])
+    wipe_res = simulate_wipe(sandbox_path, rec["wipe_level"])
     print(f"[Step 3] Wipe Status: {wipe_res['details']}")
     
     # 4. Trust Score
-    trust = calculate_trust_score(scan, after_wipe=True)
+    # Re-scan after wipe
+    scan_after = scan_data(sandbox_path)
+    trust = calculate_trust_score(scan_after)
     print(f"[Step 4] Verified Trust Score: {trust['trust_score']}%")
     
     # 5. Certificate
@@ -37,12 +39,12 @@ def run_demo():
     # Simulate Tamper
     print("\n[!] SIMULATING SABOTAGE: Altering Trust Score in Memory...")
     tampered_cert = cert.copy()
-    tampered_cert['trust_score'] = 100 # Change from calculated value
+    tampered_cert['trust_score'] = 0 # Change from 100
     print(f"[Step 7] Re-Verification: {verify_certificate(tampered_cert)}")
     
     # 7. Attack Simulation (Forensic Entropy)
     attack = simulate_attack()
-    print(f"[Step 8] Forensic Result: {attack['result']}")
+    print(f"[Step 8] Forensic Result: {attack['result'] if 'result' in attack else attack['report']}")
 
 if __name__ == "__main__":
     run_demo()

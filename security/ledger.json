@@ -201,5 +201,117 @@
         "trust_score": 100,
         "wipe_level": "Basic",
         "hash": "16a92fd462d8747955e1126823554ca72a793e95bad53749a796dd46f417fa1a"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 08:35:37.272497",
+        "trust_score": 100,
+        "wipe_level": "Basic",
+        "hash": "48162ea01696904fcf643fb7d9ae488dd807f70b3404458c84ca2fc4f77ae1d5"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 08:40:45.030678",
+        "trust_score": 100,
+        "wipe_level": "Advanced Multi-pass",
+        "hash": "80295ecb0b2b615c3252be86d3f1dd1304c7443619ae3b26bfc905e50634f5a8"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 08:41:31.637781",
+        "trust_score": 100,
+        "wipe_level": "Advanced Multi-pass",
+        "hash": "0fd98569d412c236423f05f1a2ac2944b4951fac5608a6f836abbb2fe0ca6306"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 08:45:09.173568",
+        "trust_score": 100,
+        "wipe_level": "Basic",
+        "hash": "f4faefd659c0f258bef65fd025fba170c6452a3bb4ba1358a1578c27b9767a05"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 09:07:07.365018",
+        "trust_score": 100,
+        "wipe_level": "Basic",
+        "hash": "6f9e45f4da8205ee043590f95b054870b2cdcfa2a3c7e56d9aa6ad920345c7e5"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-05 09:09:03.124981",
+        "trust_score": 100,
+        "wipe_level": "Advanced Multi-pass",
+        "hash": "db515112dda5bf1d5530b80daf4dff82452d2d9fda72c5eb28388d8eb9b0b12c"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-07 17:01:59.200451",
+        "trust_score": 100,
+        "wipe_level": "Basic",
+        "hash": "25e658063247824b58ca88252b3aee594a8a20c239ae682cfe56e99d9591d6a5"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-07 17:02:17.051789",
+        "trust_score": 100,
+        "wipe_level": "Basic",
+        "hash": "63d51a646be74a7a4c333c0469268437dd20eef188474e010e40e111f395b6f4"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-07 17:02:19.116919",
+        "trust_score": 100,
+        "wipe_level": "Basic",
+        "hash": "2109c183d114b486604dfcb926c4fd4c0cb005674a9f9b687aba2623516f84db"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-07 17:02:30.242289",
+        "trust_score": 100,
+        "wipe_level": "Basic",
+        "hash": "ddc3547f86eb31f83ad65e86968422ea918cc69e998c7ff700f67ec66bf17e05"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-07 17:02:32.054137",
+        "trust_score": 100,
+        "wipe_level": "Basic",
+        "hash": "cbe812478d06babcfc5781d74a1575c1cccdbb12bfcf1491bc2dc5c2832379a6"
+    },
+    {
+        "device_id": "DEV-001",
+        "timestamp": "2026-05-09 12:15:44.052743",
+        "trust_score": 100,
+        "wipe_level": "DoD 3-pass",
+        "hash": "2be7f178c5f478c93073289eeb26291bb1fbdad214ff49a60e036dadd389219e"
+    },
+    {
+        "device_id": "DEV-001",
+        "timestamp": "2026-05-09 12:16:18.446512",
+        "trust_score": 100,
+        "wipe_level": "DoD 3-pass",
+        "hash": "0adff5a595e06464e891c5be8f6debac4517f5b09adddca0cf9c491aeb90ec9e"
+    },
+    {
+        "device_id": "DEV-001",
+        "timestamp": "2026-05-09 12:17:30.872944",
+        "trust_score": 100,
+        "wipe_level": "DoD 3-pass",
+        "hash": "b31e9848d60182dbf2b7776acb92b6e03b223ee1dbea1dfa3162a3ab490e94fd"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-09 12:24:10.807450",
+        "trust_score": 100,
+        "wipe_level": "Basic",
+        "hash": "34c4e4abeb05df202e2039a411c3c9e7530496f7e7bcc8dc79a628ae153b350b"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-09 12:24:33.864234",
+        "trust_score": 100,
+        "wipe_level": "Basic",
+        "hash": "7ea96b3a7d05e078ac7181433c151ba0b4ccd447d164c6d5374e413a146d213c"
     }
 ]

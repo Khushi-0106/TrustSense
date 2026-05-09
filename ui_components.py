@@ -474,7 +474,7 @@ def get_verification_portal_html(data, tamper_detected=False):
 
             <div class="status-card">
                 <div>
-                    <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">VERDICT</div>
+                    <div style="font-size: 0.7rem; color: #cbd5e1; text-transform: uppercase;">VERDICT</div>
                     <div class="badge-text">{"SAFE FOR RESALE" if not tamper_detected else "TAMPER DETECTED"}</div>
                 </div>
                 <div class="padlock-box">
@@ -482,7 +482,7 @@ def get_verification_portal_html(data, tamper_detected=False):
                 </div>
             </div>
 
-            <p style="margin-top: 30px; font-size: 0.7rem; color: #555; text-align: center;">
+            <p style="margin-top: 30px; font-size: 0.7rem; color: #94a3b8; text-align: center;">
                 TRUSTSENSE+ FORENSIC VERIFICATION NODE #772-B
             </p>
         </div>

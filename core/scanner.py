@@ -1,6 +1,7 @@
 import os
 import re
 from collections import defaultdict
+import ctypes
 
 SENSITIVE_KEYWORDS = [
     'password', 'secret', 'api_key', 'access_token', 'credentials',
@@ -61,10 +62,29 @@ def scan_data(path):
             else:
                 file_types["No Extension"] += 1
 
-            if file.startswith('.') or any(part.startswith('.') for part in root.split(os.path.sep)):
+            # Enhanced Hidden File Detection (Cross-Platform)
+            is_hidden = False
+            if file.startswith('.'):
+                is_hidden = True
+            elif os.name == 'nt':
+                try:
+                    attrs = ctypes.windll.kernel32.GetFileAttributesW(full_path)
+                    is_hidden = bool(attrs & 2) # FILE_ATTRIBUTE_HIDDEN = 2
+                except:
+                    pass
+            
+            if is_hidden:
                 hidden += 1
 
-            if ext in ['.tmp', '.log', '.bak', '.swp']:
+            # Enhanced Temporary File Detection
+            temp_exts = ['.tmp', '.log', '.bak', '.swp', '.temp', '.old', '.cache', '.thumbs', '.db']
+            is_temp = False
+            if ext in temp_exts:
+                is_temp = True
+            elif 'temp' in root.lower() or 'tmp' in root.lower():
+                is_temp = True
+            
+            if is_temp:
                 temp += 1
 
             # NEW: Content-based sensitivity detection
