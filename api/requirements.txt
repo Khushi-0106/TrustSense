@@ -1,0 +1,7 @@
+flask
+flask-cors
+qrcode
+reportlab
+Pillow
+python-dateutil
+requests
