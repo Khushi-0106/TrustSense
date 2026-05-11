@@ -390,5 +390,12 @@
         "trust_score": 100,
         "wipe_level": "DoD 3-pass",
         "hash": "47f8abc87aef36d04da4c08e972d85e487975121291b673631e2612cf05ed826"
+    },
+    {
+        "device_id": "TS-UNIT-01",
+        "timestamp": "2026-05-11 18:22:21.626999",
+        "trust_score": 100,
+        "wipe_level": "Basic",
+        "hash": "138c59ab1dcc5b15aa4728f1b990253188b579790eaababfbc9764900b018ffe"
     }
 ]
