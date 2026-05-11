@@ -1,7 +1,12 @@
 import os
 import shutil
+import time
+import subprocess
 
 def overwrite_file(file_path, wipe_level):
+    """
+    Overwrites file content with random bytes before deletion to prevent recovery.
+    """
     try:
         passes = 3 if wipe_level != "Basic" else 1
         size = os.path.getsize(file_path)
@@ -13,9 +18,18 @@ def overwrite_file(file_path, wipe_level):
         pass
 
 def simulate_wipe(folder_path, wipe_level="Basic"):
+    """
+    Handles the wiping logic for a specific path (file or folder).
+    """
     folder_path = folder_path.strip()
     deleted_files = []
     deleted_folders = 0
+
+    if not os.path.exists(folder_path):
+        return {
+            "status": "error",
+            "details": f"Path not found: {folder_path}"
+        }
 
     # SUPPORT FOR INDIVIDUAL FILE WIPE
     if os.path.isfile(folder_path):
@@ -32,20 +46,20 @@ def simulate_wipe(folder_path, wipe_level="Basic"):
         except Exception as e:
             raise Exception(f"Failed to delete file: {str(e)}")
 
-    # First delete files
+    # SUPPORT FOR FOLDER WIPE
+    # First delete files recursively
     for root, dirs, files in os.walk(folder_path, topdown=False):
         for file in files:
             full_path = os.path.join(root, file)
             overwrite_file(full_path, wipe_level)
             try:
                 os.remove(full_path)
-                print(f"DEBUG: Deleted file {full_path}")
                 deleted_files.append(full_path)
             except Exception as e:
                 print(f"DEBUG: Failed to delete {full_path}: {e}")
                 pass
                 
-        # Then remove empty folders
+        # Then remove empty sub-folders
         for directory in dirs:
             dir_path = os.path.join(root, directory)
             try:
@@ -55,8 +69,6 @@ def simulate_wipe(folder_path, wipe_level="Basic"):
                 pass
 
     # Finally, attempt to remove the root folder itself
-    import time
-    import subprocess
     try:
         if os.path.exists(folder_path):
             # Small delay to allow file handles to close

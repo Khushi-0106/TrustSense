@@ -2,6 +2,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 import time
 import os
+import shutil
 import pandas as pd
 import platform
 
@@ -19,6 +20,12 @@ import streamlit.components.v1 as components
 from ui_components import get_passport_html, get_verification_portal_html, get_qr_base64, get_local_ip
 from processing.neo_pdf import generate_neo_pdf
 from processing.backup import perform_backup
+# --- ENVIRONMENT DETECTION ---
+# Check if running on a cloud platform (like Railway)
+is_cloud = os.getenv("RAILWAY_STATIC_URL") is not None or os.getenv("PORT") is not None
+
+# If you want a manual override for testing:
+# is_cloud = True
 
 # Create dummy data if needed
 if not os.path.exists("./test_data"):
@@ -209,11 +216,6 @@ st.markdown("""
         <p class="hero-subtitle">AI-Powered Device Sanitization & Certification</p>
     </div>
 """, unsafe_allow_html=True)
-
-# Detect if running in cloud
-is_cloud = platform.system() != "Windows" or os.environ.get("VERCEL") or "streamlit.app" in st.get_option("browser.serverAddress")
-if is_cloud:
-    st.error("🛑 **CLOUD DEMO MODE**: This web version can ONLY wipe the internal `/demo_files` folder. To wipe folders on YOUR physical laptop, you must run the app locally via your terminal.")
 
 # Input Section
 with st.container():
