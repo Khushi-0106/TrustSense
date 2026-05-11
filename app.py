@@ -330,8 +330,13 @@ if st.session_state.get("stage") == "WIPING":
         
     with st.spinner("Generating cryptographically signed PDF..."):
         cert = generate_certificate(device_id, after_score["trust_score"], wipe_plan["wipe_level"])
+        st.session_state.cert = cert
         store_certificate(cert)
         status = "SAFE" if attack["is_secure"] else "UNSAFE"
+        st.session_state.status = status
+        st.session_state.after_score = after_score
+        st.session_state.attack = attack
+        st.session_state.scan_result = new_scan
         
         cert_data = {
             "device_id": device_id,
