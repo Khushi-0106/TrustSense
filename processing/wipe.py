@@ -17,6 +17,21 @@ def simulate_wipe(folder_path, wipe_level="Basic"):
     deleted_files = []
     deleted_folders = 0
 
+    # SUPPORT FOR INDIVIDUAL FILE WIPE
+    if os.path.isfile(folder_path):
+        overwrite_file(folder_path, wipe_level)
+        try:
+            os.remove(folder_path)
+            return {
+                "status": "completed",
+                "deleted_count": 1,
+                "deleted_files": [folder_path],
+                "deleted_folders_count": 0,
+                "details": f"Single file {os.path.basename(folder_path)} wiped via {wipe_level} pattern."
+            }
+        except Exception as e:
+            raise Exception(f"Failed to delete file: {str(e)}")
+
     # First delete files
     for root, dirs, files in os.walk(folder_path, topdown=False):
         for file in files:

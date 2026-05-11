@@ -285,17 +285,26 @@ if st.session_state.get("stage") == "WIPING":
     # Automatically continue with wipe logic
     with st.expander("⚡ Eradication Progress", expanded=True):
         progress_bar = st.progress(0, text="Initializing override sequences...")
-        for i in range(100):
-            time.sleep(0.01)
-            if i == 30:
-                progress_bar.progress(i + 1, text="Overwriting file segments with cryptographic noise...")
-            elif i == 70:
-                progress_bar.progress(i + 1, text="Purging directory structures...")
-            else:
+        
+        # Call the actual wipe with error capturing
+        try:
+            print(f"DEBUG: Starting wipe for {file_path}")
+            wipe_status = simulate_wipe(file_path, wipe_plan["wipe_level"])
+            
+            for i in range(100):
+                time.sleep(0.005)
                 progress_bar.progress(i + 1)
                 
-        wipe_status = simulate_wipe(file_path, wipe_plan["wipe_level"])
-        st.success(f"Protocol Complete: {wipe_status['details']}")
+            st.success(f"Protocol Complete: {wipe_status['details']}")
+            
+            if wipe_status.get("deleted_files"):
+                st.info(f"✅ Successfully eradicated {len(wipe_status['deleted_files'])} items.")
+            else:
+                st.warning("⚠️ No files were deleted. Check if the folder is empty or if the path is correct.")
+                
+        except Exception as e:
+            st.error(f"❌ CRITICAL ERROR DURING WIPE: {str(e)}")
+            st.stop()
         if wipe_status.get("deleted_files"):
             with st.expander("🗑️ View Deleted Files List"):
                 for df in wipe_status["deleted_files"]:
