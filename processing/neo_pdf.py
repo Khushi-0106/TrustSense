@@ -1,6 +1,7 @@
 import base64
 import qrcode
 from io import BytesIO
+# pyrefly: ignore [missing-import]
 from xhtml2pdf import pisa
 from datetime import datetime
 from ui_components import get_local_ip
