@@ -23,13 +23,22 @@ from processing.backup import perform_backup
 # Create dummy data if needed
 if not os.path.exists("./test_data"):
     os.makedirs("./test_data", exist_ok=True)
-    with open("./test_data/sensitive_db.config", "w") as f:
-        f.write("DB_PASSWORD=admin_secret_123\nAPI_KEY=ts-live-998877")
-    with open("./test_data/normal_file.txt", "w") as f:
-        f.write("This is just a regular text file for testing.")
-    os.makedirs("./test_data/subfolder", exist_ok=True)
-    with open("./test_data/subfolder/credentials.txt", "w") as f:
-        f.write("user:admin\npass:secret")
+    files = {
+        "production.key": "PRIVATE_KEY_55882211",
+        "sensitive_db.config": "DB_PASSWORD=admin_secret_123",
+        "forensic_audit.log": "Access attempt from 192.168.1.50 denied",
+        "backup_v1.bak": "Old system state backup",
+        "passwords.csv": "site,username,password\ngithub,khushi,********",
+        "intel_report.pdf": "%PDF-1.4 simulated forensic report",
+        "asset_image.jpg": "FFD8FFE0 simulated image data",
+        "README.txt": "This is a safe file."
+    }
+    for name, content in files.items():
+        with open(os.path.join("./test_data", name), "w") as f:
+            f.write(content)
+    os.makedirs("./test_data/hidden_vault", exist_ok=True)
+    with open("./test_data/hidden_vault/.vault_token", "w") as f:
+        f.write("H-TOKEN-XYZ-998")
 
 st.set_page_config(page_title="TrustSense+ Platform", layout="wide", page_icon="🛡️")
 
