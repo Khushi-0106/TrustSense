@@ -148,6 +148,7 @@ st.markdown("""
             border-color: rgba(16, 185, 129, 0.6) !important;
             box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
         }
+        
         div[data-testid="stExpander"] > details > summary {
             color: #00f3ff; /* Bright Cyan */
             font-size: 1.2rem;
@@ -216,6 +217,16 @@ st.markdown("""
         <p class="hero-subtitle">AI-Powered Device Sanitization & Certification</p>
     </div>
 """, unsafe_allow_html=True)
+# --- ADD THE SANDBOX BUTTON HERE ---
+with st.container():
+    st.markdown("### 🧪 Demo Environment")
+    if st.button("🛠️ GENERATE LIVE CLOUD SANDBOX"):
+        from processing.wipe import setup_live_sandbox
+        # This creates a real folder inside the Railway server
+        path = setup_live_sandbox("DEMO_TARGET_UNIT")
+        st.success(f"Sandbox Environment Ready!")
+        st.code(path, language="text")
+        st.info("👆 Copy the path above and paste it into 'Target Directory Path' below.")
 
 # Input Section
 with st.container():
