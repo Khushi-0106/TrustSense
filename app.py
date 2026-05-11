@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import time
 import os
 import pandas as pd
@@ -69,7 +70,7 @@ st.markdown("""
         
         .stApp {
             background-color: #0b1120; /* Very dark slate */
-            color: #e2e8f0;
+            color: #ffffff; /* Bright white text */
         }
         
         @keyframes glow {
@@ -98,9 +99,10 @@ st.markdown("""
         
         .hero-subtitle {
             font-size: 1.2rem;
-            color: #B2F2BB; /* Pastel green accent */
+            color: #ffffff; /* Bright white accent */
             letter-spacing: 2px;
             text-transform: uppercase;
+            text-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
         }
 
         /* Glassmorphism containers */
@@ -128,9 +130,9 @@ st.markdown("""
             box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
         }
         div[data-testid="stExpander"] > details > summary {
-            color: #06b6d4;
+            color: #00f3ff; /* Bright Cyan */
             font-size: 1.2rem;
-            font-weight: 600;
+            font-weight: 700;
         }
         
         /* Circular Progress Ring */
@@ -199,7 +201,7 @@ st.markdown("""
 # Input Section
 with st.container():
     st.markdown('<div class="glass-container">', unsafe_allow_html=True)
-    st.markdown("<h3 style='color:#06b6d4; margin-top:0;'>⚙️ Target Configuration</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='color:#00f3ff; margin-top:0;'>⚙️ Target Configuration</h3>", unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
         default_path = "C:\\TestFolder" if platform.system() == "Windows" else "./test_data"
@@ -383,11 +385,11 @@ if st.session_state.protocol_finished:
         after_score_val = st.session_state.after_score['trust_score']
         
         with c1:
-            st.markdown("<h5 style='text-align: center; color: #94a3b8;'>PRE-WIPE SCORE</h5>", unsafe_allow_html=True)
+            st.markdown("<h5 style='text-align: center; color: #ffffff;'>PRE-WIPE SCORE</h5>", unsafe_allow_html=True)
             st.markdown(render_svg_ring(before_score_val, "red"), unsafe_allow_html=True)
             
         with c2:
-            st.markdown("<h5 style='text-align: center; color: #94a3b8;'>POST-WIPE SCORE</h5>", unsafe_allow_html=True)
+            st.markdown("<h5 style='text-align: center; color: #ffffff;'>POST-WIPE SCORE</h5>", unsafe_allow_html=True)
             st.markdown(render_svg_ring(after_score_val, "green"), unsafe_allow_html=True)
             
         with c3:

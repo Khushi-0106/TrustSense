@@ -71,3 +71,31 @@ def simulate_wipe(folder_path, wipe_level="Basic"):
         "deleted_folders_count": deleted_folders,
         "details": f"{len(deleted_files)} files and {deleted_folders} folders wiped via {wipe_level} pattern."
     }
+
+def setup_live_sandbox(folder_name="TestFolder"):
+    """
+    Creates a sandbox environment with dummy sensitive data for testing.
+    Returns the absolute path to the sandbox.
+    """
+    path = os.path.abspath(folder_name)
+    if os.path.exists(path):
+        shutil.rmtree(path)
+    
+    os.makedirs(path)
+    
+    # Create some dummy files
+    files = {
+        "passwords.txt": "admin:password123\nuser:secret_access",
+        "config.json": '{"api_key": "TS-SK-99212X", "env": "prod"}',
+        "readme.txt": "This is a public file with no sensitive info.",
+        "subfolder/keys.pem": "-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA75...",
+        "subfolder/data.csv": "id,name,ssn\n1,John Doe,123-456-7890"
+    }
+    
+    for filename, content in files.items():
+        file_path = os.path.join(path, filename)
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        with open(file_path, "w") as f:
+            f.write(content)
+            
+    return path
