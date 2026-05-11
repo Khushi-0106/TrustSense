@@ -201,6 +201,11 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
+# Detect if running in cloud
+is_cloud = platform.system() != "Windows" or os.environ.get("VERCEL") or "streamlit.app" in st.get_option("browser.serverAddress")
+if is_cloud:
+    st.error("🛑 **CLOUD DEMO MODE**: This web version can ONLY wipe the internal `/demo_files` folder. To wipe folders on YOUR physical laptop, you must run the app locally via your terminal.")
+
 # Input Section
 with st.container():
     st.markdown('<div class="glass-container">', unsafe_allow_html=True)
