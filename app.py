@@ -208,9 +208,14 @@ with st.container():
     col1, col2 = st.columns(2)
     with col1:
         default_path = "C:\\TestFolder" if platform.system() == "Windows" else "./test_data"
-        file_path = st.text_input("📁 Target Directory Path", default_path)
+        raw_path = st.text_input("📁 Target Directory Path", default_path)
+        # Normalize path for Windows/Linux compatibility
+        file_path = os.path.abspath(os.path.expanduser(raw_path.strip().replace('"', '')))
+        
         if not os.path.exists(file_path):
-            st.warning("⚠️ Path not found. Please create the folder or check the path.")
+            st.warning(f"⚠️ Path not found: {file_path}")
+        else:
+            st.success(f"📂 Target Locked: {file_path}")
     with col2:
         device_id = st.text_input("💻 Device ID", "TS-UNIT-01")
         device_name = platform.node()
