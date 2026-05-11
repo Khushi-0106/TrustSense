@@ -70,6 +70,7 @@ def simulate_wipe(folder_path, wipe_level="Basic"):
     return {
         "status": "completed",
         "deleted_count": len(deleted_files),
+        "deleted_files": deleted_files,
         "deleted_folders_count": deleted_folders,
         "details": f"{len(deleted_files)} files and {deleted_folders} folders wiped via {wipe_level} pattern."
     }

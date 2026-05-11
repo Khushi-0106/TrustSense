@@ -296,6 +296,10 @@ if st.session_state.get("stage") == "WIPING":
                 
         wipe_status = simulate_wipe(file_path, wipe_plan["wipe_level"])
         st.success(f"Protocol Complete: {wipe_status['details']}")
+        if wipe_status.get("deleted_files"):
+            with st.expander("🗑️ View Deleted Files List"):
+                for df in wipe_status["deleted_files"]:
+                    st.write(f"• {df}")
 
     with st.spinner("Verifying destruction and simulating forensic attacks..."):
         new_scan = scan_data(file_path)
@@ -464,7 +468,10 @@ if st.session_state.protocol_finished:
                 type="primary"
             )
         else:
-            st.error("PDF generation encountered a critical error.")
+            st.error("❌ PDF generation encountered a critical error. Please check your terminal for the 'PDF Error' log.")
+            if st.button("Retry PDF Generation"):
+                st.session_state.protocol_finished = False
+                st.rerun()
 
     # 5. LIVE VERIFICATION SIMULATION
     with st.expander("🌐 Stage 5: Live Verification Portal Simulation", expanded=False):
