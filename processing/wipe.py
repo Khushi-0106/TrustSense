@@ -24,8 +24,10 @@ def simulate_wipe(folder_path, wipe_level="Basic"):
             overwrite_file(full_path, wipe_level)
             try:
                 os.remove(full_path)
+                print(f"DEBUG: Deleted file {full_path}")
                 deleted_files.append(full_path)
-            except:
+            except Exception as e:
+                print(f"DEBUG: Failed to delete {full_path}: {e}")
                 pass
                 
         # Then remove empty folders

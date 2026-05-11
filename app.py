@@ -20,13 +20,16 @@ from ui_components import get_passport_html, get_verification_portal_html, get_q
 from processing.neo_pdf import generate_neo_pdf
 from processing.backup import perform_backup
 
-# Create dummy data for Cloud Demo if needed
-if platform.system() != "Windows" and not os.path.exists("./test_data"):
+# Create dummy data if needed
+if not os.path.exists("./test_data"):
     os.makedirs("./test_data", exist_ok=True)
     with open("./test_data/sensitive_db.config", "w") as f:
         f.write("DB_PASSWORD=admin_secret_123\nAPI_KEY=ts-live-998877")
     with open("./test_data/normal_file.txt", "w") as f:
         f.write("This is just a regular text file for testing.")
+    os.makedirs("./test_data/subfolder", exist_ok=True)
+    with open("./test_data/subfolder/credentials.txt", "w") as f:
+        f.write("user:admin\npass:secret")
 
 st.set_page_config(page_title="TrustSense+ Platform", layout="wide", page_icon="🛡️")
 
@@ -206,6 +209,8 @@ with st.container():
     with col1:
         default_path = "C:\\TestFolder" if platform.system() == "Windows" else "./test_data"
         file_path = st.text_input("📁 Target Directory Path", default_path)
+        if not os.path.exists(file_path):
+            st.warning("⚠️ Path not found. Please create the folder or check the path.")
     with col2:
         device_id = st.text_input("💻 Device ID", "TS-UNIT-01")
         device_name = platform.node()
