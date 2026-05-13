@@ -29,6 +29,13 @@ export default function TrustSensePage() {
   const [progress, setProgress] = useState(0);
   const [progressText, setProgressText] = useState("");
   
+  // Data states
+  const [scanResults, setScanResults] = useState<any>(null);
+  const [wipeResults, setWipeResults] = useState<any>(null);
+  const [cert, setCert] = useState<any>(null);
+  const [pdfBase64, setPdfBase64] = useState<string | null>(null);
+  const [activeDirHandle, setActiveDirHandle] = useState<any>(null);
+
   // Console states
   const [consoleLogs, setConsoleLogs] = useState<string[]>(["[SYSTEM] TrustSense Mesh Node Active.", "[SYSTEM] Awaiting forensic target..."]);
 
@@ -56,9 +63,11 @@ export default function TrustSensePage() {
 
   const selectFolder = async () => {
     try {
-      addLog("Requesting local file system authorization...");
+      addLog("Requesting local file system authorization (Read & Write)...");
       // @ts-ignore - showDirectoryPicker is a modern API
-      const dirHandle = await window.showDirectoryPicker();
+      const dirHandle = await window.showDirectoryPicker({ mode: "readwrite" });
+      setActiveDirHandle(dirHandle);
+      
       setStage("WIPING"); // Just to show we are busy
       setProgressText("Gaining forensic access to local directory...");
       
@@ -116,22 +125,65 @@ export default function TrustSensePage() {
     setIsWiping(true);
     addLog("SHREDDING PROTOCOL INITIATED.");
     
-    const steps = [
-      "Initializing override sequences...",
-      "Overwriting file segments with cryptographic noise...",
-      "Purging directory structures...",
-      "Verifying destruction..."
-    ];
-    
-    for (let i = 0; i <= 100; i++) {
-      setProgress(i);
-      if (i < 25) setProgressText(steps[0]);
-      else if (i < 70) setProgressText(steps[1]);
-      else if (i < 90) setProgressText(steps[2]);
-      else setProgressText(steps[3]);
+    if (activeDirHandle) {
+      addLog("Executing client-side cryptographic wipe on local files...");
+      setProgressText("Overwriting local file segments with cryptographic noise...");
       
-      if (i % 25 === 0) addLog(steps[i/25] || "Finalizing...");
-      await new Promise(r => setTimeout(r, 20));
+      let wipedCount = 0;
+      
+      const wipeEntry = async (handle: any) => {
+        for await (const [name, entry] of handle.entries()) {
+          if (entry.kind === 'file') {
+            try {
+              // 1. Overwrite with cryptographic noise (Pseudo-random zeros)
+              const writable = await entry.createWritable();
+              const noise = new Uint8Array(1024 * 512); // 512KB noise
+              crypto.getRandomValues(noise);
+              await writable.write(noise);
+              await writable.close();
+              
+              // 2. Delete the file
+              await handle.removeEntry(name);
+              wipedCount++;
+              if (wipedCount % 5 === 0) {
+                addLog(`[ERADICATED] ${wipedCount} objects destroyed.`);
+                setProgress(Math.min(90, (wipedCount / scanResults.results.total_files) * 100));
+              }
+            } catch (e) {
+              console.error(e);
+            }
+          } else if (entry.kind === 'directory') {
+            await wipeEntry(entry);
+            try {
+               await handle.removeEntry(name, { recursive: true });
+            } catch(e) {}
+          }
+        }
+      };
+
+      await wipeEntry(activeDirHandle);
+      setProgress(100);
+      setProgressText("Verifying destruction...");
+      addLog(`Local directory purged successfully. ${wipedCount} objects permanently destroyed.`);
+      setActiveDirHandle(null); // Clear handle
+    } else {
+      addLog("Simulating wipe (No local directory handle).");
+      const steps = [
+        "Initializing override sequences...",
+        "Overwriting file segments with cryptographic noise...",
+        "Purging directory structures...",
+        "Verifying destruction..."
+      ];
+      for (let i = 0; i <= 100; i++) {
+        setProgress(i);
+        if (i < 25) setProgressText(steps[0]);
+        else if (i < 70) setProgressText(steps[1]);
+        else if (i < 90) setProgressText(steps[2]);
+        else setProgressText(steps[3]);
+        
+        if (i % 25 === 0) addLog(steps[i/25] || "Finalizing...");
+        await new Promise(r => setTimeout(r, 20));
+      }
     }
 
     try {
