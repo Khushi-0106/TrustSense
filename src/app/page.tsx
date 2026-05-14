@@ -610,56 +610,98 @@ export default function TrustSensePage() {
 
               {/* Premium Security Passport */}
               <motion.div 
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className="glass-card p-0 overflow-hidden relative neo-border-green max-w-4xl mx-auto"
+                initial={{ scale: 0.95, opacity: 0, rotateX: 10 }}
+                animate={{ scale: 1, opacity: 1, rotateX: 0 }}
+                transition={{ delay: 0.3, type: "spring", stiffness: 100 }}
+                className="bg-[#050b14] border-4 border-trust-green p-2 max-w-4xl mx-auto relative shadow-[0_0_50px_rgba(178,242,187,0.15)] group perspective-1000"
               >
-                <div className="bg-trust-green text-black p-5 font-black text-center uppercase tracking-[0.5em] text-sm border-b-4 border-black relative">
-                  Official Security Passport
-                  <div className="absolute right-6 top-1/2 -translate-y-1/2 opacity-20">
-                    <Shield className="w-6 h-6" />
-                  </div>
-                </div>
-                
-                <div className="p-10 grid md:grid-cols-2 gap-12 items-center bg-[#0d1526]">
-                  <div className="space-y-8">
-                    <div className="bg-trust-yellow text-black p-4 border-2 border-black font-black text-[10px] uppercase shadow-[6px_6px_0px_white] tracking-widest inline-block w-full text-center">
-                      Cert ID: {cert?.hash?.substring(0, 12)} | Node: {deviceId}
+                {/* Decorative corners */}
+                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-trust-green -translate-x-4 -translate-y-4" />
+                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-trust-green translate-x-4 -translate-y-4" />
+                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-trust-green -translate-x-4 translate-y-4" />
+                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-trust-green translate-x-4 translate-y-4" />
+
+                <div className="border border-white/10 h-full relative overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
+                  
+                  {/* Header */}
+                  <div className="bg-trust-green text-black p-6 flex items-center justify-between border-b-4 border-black relative z-10">
+                    <div className="flex items-center gap-4">
+                      <Shield className="w-10 h-10" />
+                      <div>
+                        <div className="font-black text-2xl uppercase tracking-[0.3em] leading-none">Official Security Passport</div>
+                        <div className="text-[9px] uppercase tracking-widest font-bold mt-1 opacity-80">Cryptographic Eradication Certificate</div>
+                      </div>
                     </div>
+                    {/* Faux Barcode */}
+                    <div className="flex gap-[2px] h-10 opacity-70">
+                      {[...Array(20)].map((_, i) => (
+                        <div key={i} className="bg-black" style={{ width: Math.random() > 0.5 ? '2px' : '4px' }} />
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Body */}
+                  <div className="p-10 grid md:grid-cols-5 gap-12 relative z-10">
                     
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="bg-white/5 border border-white/10 p-5 rounded-xl text-center">
-                        <div className="text-[9px] uppercase font-black text-gray-500 tracking-widest mb-1">Threats Purged</div>
-                        <div className="text-3xl font-black text-trust-green">{scanResults.results.sensitive_files}</div>
+                    {/* Left Column Data */}
+                    <div className="md:col-span-3 space-y-8">
+                      <div className="bg-trust-yellow text-black p-4 font-black text-[11px] uppercase shadow-[8px_8px_0px_rgba(255,255,255,0.1)] tracking-[0.2em] border border-black flex justify-between items-center">
+                        <span>Cert ID: {cert?.hash?.substring(0, 12)}</span>
+                        <span className="opacity-50">|</span>
+                        <span>Node: {deviceId}</span>
                       </div>
-                      <div className="bg-white/5 border border-white/10 p-5 rounded-xl text-center">
-                        <div className="text-[9px] uppercase font-black text-gray-500 tracking-widest mb-1">Total Validated</div>
-                        <div className="text-3xl font-black text-trust-green">{scanResults.results.total_files}</div>
+                      
+                      <div className="grid grid-cols-2 gap-6">
+                        <div className="bg-black/60 border border-white/5 p-6 backdrop-blur-md relative overflow-hidden group-hover:border-trust-green/50 transition-colors">
+                          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-trust-green to-transparent" />
+                          <div className="text-[10px] uppercase font-black text-gray-500 tracking-widest mb-2">Threats Purged</div>
+                          <div className="text-5xl font-black text-white">{scanResults.results.sensitive_files}</div>
+                        </div>
+                        <div className="bg-black/60 border border-white/5 p-6 backdrop-blur-md relative overflow-hidden group-hover:border-trust-green/50 transition-colors">
+                          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-trust-cyan to-transparent" />
+                          <div className="text-[10px] uppercase font-black text-gray-500 tracking-widest mb-2">Total Validated</div>
+                          <div className="text-5xl font-black text-white">{scanResults.results.total_files}</div>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-4">
+                        <div className="flex-1 border border-dashed border-trust-green/40 p-4 text-left bg-trust-green/5">
+                          <div className="text-[8px] uppercase font-black text-trust-green/70 tracking-widest mb-1">Eradication Protocol</div>
+                          <div className="font-black text-white text-sm tracking-widest">ANTIGRAVITY v4.2</div>
+                        </div>
+                        <div className="flex-1 border border-dashed border-trust-cyan/40 p-4 text-left bg-trust-cyan/5">
+                          <div className="text-[8px] uppercase font-black text-trust-cyan/70 tracking-widest mb-1">Timestamp</div>
+                          <div className="font-black text-white text-sm tracking-widest">{new Date().toISOString().split('T')[0]}</div>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="border-2 border-dashed border-trust-green/40 p-6 text-center rounded-2xl bg-trust-green/5">
-                      <div className="text-[9px] uppercase font-black text-gray-500 tracking-widest mb-2">Protocol Deployed</div>
-                      <div className="font-black text-trust-green text-lg tracking-tighter">[ ANTIGRAVITY v4.2 ]</div>
-                      <div className="text-[9px] font-bold text-gray-400 mt-1">Multi-Pass Cryptographic Eradication</div>
+                    {/* Right Column Visuals */}
+                    <div className="md:col-span-2 flex flex-col items-center justify-center relative">
+                      {/* Glowing Stamp */}
+                      <div className="relative w-48 h-48 flex items-center justify-center">
+                         <div className="absolute inset-0 border-[6px] border-trust-green rounded-full opacity-20 animate-ping" />
+                         <div className="absolute inset-2 border-[4px] border-trust-green rounded-full border-dashed animate-[spin_10s_linear_infinite]" />
+                         <div className="bg-trust-green/10 w-full h-full rounded-full flex flex-col items-center justify-center border-4 border-trust-green shadow-[0_0_30px_rgba(178,242,187,0.4)] backdrop-blur-sm z-10 rotate-[-15deg]">
+                            <Lock className="text-trust-green w-12 h-12 mb-2" />
+                            <span className="font-black text-trust-green uppercase tracking-[0.3em] text-[10px]">Verified</span>
+                            <span className="font-bold text-trust-green/70 uppercase tracking-[0.2em] text-[7px] mt-1">Zero-Bit Secure</span>
+                         </div>
+                      </div>
+
+                      {/* Signature Block */}
+                      <div className="mt-12 w-full text-center border-t border-white/20 pt-4 relative">
+                        <div className="font-mono text-xl text-white/40 italic mb-2 select-none -rotate-2">TrustSense Engine</div>
+                        <div className="text-[8px] font-black uppercase tracking-[0.4em] text-gray-500">Authorized Signature</div>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex flex-col items-center space-y-6">
-                    <div className="bg-white p-4 border-4 border-black w-48 h-48 flex items-center justify-center shadow-[10px_10px_0px_rgba(6,182,212,0.3)] relative overflow-hidden group">
-                       <Lock className="text-black w-20 h-20 relative z-10 transition-transform group-hover:scale-110" />
-                       <div className="absolute inset-0 opacity-[0.03] mesh-grid" />
-                    </div>
-                    <div className="text-center">
-                      <span className="text-[10px] font-black uppercase tracking-[0.4em] text-trust-cyan">Chain-Verified</span>
-                      <div className="h-1 w-20 bg-trust-cyan mx-auto mt-2 rounded-full" />
-                    </div>
+                  {/* Footer Hash */}
+                  <div className="bg-black text-trust-green/70 p-3 text-[9px] font-black font-mono border-t border-white/10 text-center tracking-[0.2em] uppercase relative z-10 flex justify-between px-6">
+                    <span>SHA-256 Signature</span>
+                    <span className="truncate ml-4">{cert?.hash}</span>
                   </div>
-                </div>
-
-                <div className="bg-trust-yellow/90 text-black p-3 text-[9px] font-black font-mono border-t-4 border-black text-center tracking-[0.1em] uppercase">
-                  SHA-256 Signature: {cert?.hash}
                 </div>
               </motion.div>
 
