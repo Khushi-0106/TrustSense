@@ -132,7 +132,13 @@ export default function TrustSensePage() {
       let wipedCount = 0;
       
       const wipeEntry = async (handle: any) => {
-        for await (const [name, entry] of handle.entries()) {
+        // Collect all entries first to avoid concurrent modification issues during iteration
+        let entries = [];
+        for await (const entry of handle.values()) {
+          entries.push(entry);
+        }
+        
+        for (const entry of entries) {
           if (entry.kind === 'file') {
             try {
               // 1. Overwrite with cryptographic noise (Pseudo-random zeros)
@@ -143,19 +149,19 @@ export default function TrustSensePage() {
               await writable.close();
               
               // 2. Delete the file
-              await handle.removeEntry(name);
+              await handle.removeEntry(entry.name);
               wipedCount++;
-              if (wipedCount % 5 === 0) {
-                addLog(`[ERADICATED] ${wipedCount} objects destroyed.`);
-                setProgress(Math.min(90, (wipedCount / scanResults.results.total_files) * 100));
-              }
+              
+              addLog(`[ERADICATED] ${entry.name}`);
+              setProgress(Math.min(90, (wipedCount / scanResults.results.total_files) * 100));
             } catch (e) {
+              addLog(`[FAILED] Could not eradicate ${entry.name}`);
               console.error(e);
             }
           } else if (entry.kind === 'directory') {
             await wipeEntry(entry);
             try {
-               await handle.removeEntry(name, { recursive: true });
+               await handle.removeEntry(entry.name, { recursive: true });
             } catch(e) {}
           }
         }
