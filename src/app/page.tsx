@@ -371,15 +371,66 @@ export default function TrustSensePage() {
               initial={{ height: 0, opacity: 0, y: 20 }}
               animate={{ height: "auto", opacity: 1, y: 0 }}
               exit={{ height: 0, opacity: 0, y: 20 }}
-              className="space-y-6 overflow-hidden"
-            >
-              <div className="glass-card border-trust-yellow/40 bg-trust-yellow/5">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2 bg-trust-yellow/20 rounded-lg">
-                    <AlertTriangle className="text-trust-yellow w-6 h-6" />
+              <div className="space-y-6 overflow-hidden">
+                {/* Visual File Categorization Graph */}
+                <div className="glass-card neo-border-cyan mb-6">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-trust-cyan/20 rounded-lg">
+                      <Database className="text-trust-cyan w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-black uppercase tracking-wider text-trust-cyan">Forensic Target Architecture</h3>
+                      <p className="text-[10px] uppercase text-gray-500 font-bold tracking-widest mt-1">Data Distribution Breakdown</p>
+                    </div>
                   </div>
-                  <h3 className="text-lg font-black uppercase tracking-wider">Pre-Wipe Action Center</h3>
+                  
+                  {/* Graph Segmented Bar */}
+                  <div className="w-full h-8 bg-black/50 rounded-full overflow-hidden flex border border-white/10 mb-4 shadow-inner">
+                    {Object.entries(scanResults.results.file_types || {}).map(([ext, count], idx) => {
+                      const colors = ['bg-trust-cyan', 'bg-trust-green', 'bg-trust-yellow', 'bg-purple-500', 'bg-blue-500', 'bg-orange-500', 'bg-red-500', 'bg-pink-500'];
+                      const color = colors[idx % colors.length];
+                      const percentage = ((count as number) / Math.max(1, scanResults.results.total_files)) * 100;
+                      return (
+                        <motion.div
+                          key={ext}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${percentage}%` }}
+                          transition={{ duration: 1, ease: "easeOut", delay: idx * 0.1 }}
+                          className={`h-full ${color} relative group cursor-pointer border-r border-black/20`}
+                        >
+                          <div className="absolute opacity-0 group-hover:opacity-100 -top-8 left-1/2 -translate-x-1/2 bg-black border border-white/10 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded text-white whitespace-nowrap z-50 pointer-events-none transition-opacity">
+                            {ext || 'unknown'}: {count as number} files ({percentage.toFixed(1)}%)
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Graph Legend */}
+                  <div className="flex flex-wrap gap-4 mt-4">
+                    {Object.entries(scanResults.results.file_types || {}).slice(0, 6).map(([ext, count], idx) => {
+                      const colors = ['bg-trust-cyan', 'bg-trust-green', 'bg-trust-yellow', 'bg-purple-500', 'bg-blue-500', 'bg-orange-500', 'bg-red-500', 'bg-pink-500'];
+                      const color = colors[idx % colors.length];
+                      return (
+                        <div key={ext} className="flex items-center gap-2">
+                          <div className={`w-3 h-3 rounded-sm ${color}`} />
+                          <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider">{ext || 'unknown'} <span className="text-white ml-1">({count as number})</span></span>
+                        </div>
+                      );
+                    })}
+                    {Object.keys(scanResults.results.file_types || {}).length > 6 && (
+                      <div className="text-[10px] font-black uppercase text-gray-600 tracking-wider">...and more</div>
+                    )}
+                  </div>
                 </div>
+
+                <div className="glass-card border-trust-yellow/40 bg-trust-yellow/5">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-trust-yellow/20 rounded-lg">
+                      <AlertTriangle className="text-trust-yellow w-6 h-6" />
+                    </div>
+                    <h3 className="text-lg font-black uppercase tracking-wider">Pre-Wipe Action Center</h3>
+                  </div>
                 
                 <div className="flex items-center justify-between mb-8 p-4 bg-black/40 rounded-xl border border-white/5">
                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Recommended Protocol</span>
