@@ -143,10 +143,17 @@ export default function TrustSensePage() {
             try {
               // 1. Overwrite with cryptographic noise (Pseudo-random zeros)
               const writable = await entry.createWritable();
+              await writable.truncate(0); // Instantly wipe file metadata and size
+              
               const noise = new Uint8Array(65536); // Max allowed by Web Crypto API
               crypto.getRandomValues(noise);
               await writable.write(noise);
               await writable.close();
+              
+              // CRITICAL FIX: Windows Defender / NTFS holds file locks for ~50-100ms after a file write is closed.
+              // If we call removeEntry immediately, Chromium swallows the OS lock rejection and fails silently.
+              // We must wait for the OS to release the file handle before attempting deletion.
+              await new Promise(r => setTimeout(r, 150));
               
               // 2. Delete the file
               await handle.removeEntry(entry.name);
