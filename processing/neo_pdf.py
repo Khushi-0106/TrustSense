@@ -4,6 +4,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, Flowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
+from reportlab.graphics.barcode import code128
 from datetime import datetime
 import qrcode
 from io import BytesIO
@@ -15,38 +16,9 @@ def get_local_ip():
     except:
         return "127.0.0.1"
 
-class BoxFlowable(Flowable):
-    def __init__(self, width, height, bg_color, border_color, border_width=2):
-        Flowable.__init__(self)
-        self.width = width
-        self.height = height
-        self.bg_color = bg_color
-        self.border_color = border_color
-        self.border_width = border_width
-
-    def draw(self):
-        self.canv.setStrokeColor(self.border_color)
-        self.canv.setFillColor(self.bg_color)
-        self.canv.setLineWidth(self.border_width)
-        self.canv.rect(0, 0, self.width, self.height, fill=1)
-
-class DashedBoxFlowable(Flowable):
-    def __init__(self, width, height, border_color):
-        Flowable.__init__(self)
-        self.width = width
-        self.height = height
-        self.border_color = border_color
-
-    def draw(self):
-        self.canv.setStrokeColor(self.border_color)
-        self.canv.setLineWidth(2)
-        self.canv.setDash(4, 4)
-        self.canv.rect(0, 0, self.width, self.height)
-
 def generate_neo_pdf(data):
     """
-    Generates a high-fidelity Pastel Neo-Brutalist PDF Security Passport using reportlab.
-    Replaces the xhtml2pdf implementation for better compatibility.
+    Generates a premium Cyber-Brutalist PDF Security Passport using reportlab.
     """
     device_id = data.get('device_id', 'TS-UNIT-01')
     sha_hash = data.get('hash', 'UNKNOWN_HASH')
@@ -55,182 +27,150 @@ def generate_neo_pdf(data):
     files_sensitive = data.get('files_sensitive', 0)
     files_safe = data.get('files_safe', 0)
 
-    # Colors
-    bg_dark = colors.HexColor("#1A1A1A")
-    pastel_green = colors.HexColor("#B2F2BB")
-    pastel_yellow = colors.HexColor("#FFF3BF")
-    data_bg = colors.HexColor("#2D2D2D")
-    text_gray = colors.HexColor("#E0E0E0")
-    label_gray = colors.HexColor("#B0B0B0")
+    # TrustSense Elite Color Palette
+    bg_dark = colors.HexColor("#050B14")
+    trust_green = colors.HexColor("#10B981")
+    trust_cyan = colors.HexColor("#06B6D4")
+    trust_yellow = colors.HexColor("#FBBF24")
+    text_white = colors.HexColor("#FFFFFF")
+    text_gray = colors.HexColor("#9CA3AF")
 
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=50, leftMargin=50, topMargin=50, bottomMargin=50)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)
     styles = getSampleStyleSheet()
 
     # Custom Styles
-    style_header = ParagraphStyle(
-        'NeoHeader',
-        fontName='Helvetica-Bold',
-        fontSize=26,
-        textColor=colors.black,
-        alignment=1,
-    )
-    style_label = ParagraphStyle(
-        'NeoLabel',
-        fontName='Helvetica',
-        fontSize=10,
-        textColor=label_gray,
-        leading=12,
-    )
-    style_value = ParagraphStyle(
-        'NeoValue',
-        fontName='Helvetica-Bold',
-        fontSize=20,
-        textColor=pastel_green,
-        leading=24,
-    )
-    style_id = ParagraphStyle(
-        'NeoID',
-        fontName='Helvetica-Bold',
-        fontSize=14,
-        textColor=colors.black,
-        alignment=1,
-    )
-    style_score = ParagraphStyle(
-        'NeoScore',
-        fontName='Helvetica-Bold',
-        fontSize=36,
-        textColor=pastel_green,
-        alignment=2,
-    )
-    style_hash = ParagraphStyle(
-        'NeoHash',
-        fontName='Courier',
-        fontSize=9,
-        textColor=colors.black,
-        leading=11,
-    )
+    style_title = ParagraphStyle('NeoTitle', fontName='Helvetica-Bold', fontSize=28, textColor=bg_dark, alignment=1)
+    style_subtitle = ParagraphStyle('NeoSub', fontName='Courier-Bold', fontSize=10, textColor=bg_dark, alignment=1, leading=14)
+    
+    style_label = ParagraphStyle('NeoLabel', fontName='Courier-Bold', fontSize=9, textColor=text_gray, leading=14)
+    style_value = ParagraphStyle('NeoValue', fontName='Helvetica-Bold', fontSize=24, textColor=text_white, leading=28)
+    
+    style_mono_green = ParagraphStyle('NeoMonoG', fontName='Courier-Bold', fontSize=11, textColor=trust_green, leading=14)
+    style_mono_yellow = ParagraphStyle('NeoMonoY', fontName='Courier-Bold', fontSize=10, textColor=trust_yellow, leading=14, alignment=1)
 
     elements = []
 
-    # 1. Score Badge (Top Right)
-    elements.append(Paragraph(f"{trust_score}/100", style_score))
-    elements.append(Spacer(1, 10))
-
-    # 2. Main Header Strip
-    header_data = [[Paragraph("SECURITY PASSPORT", style_header)]]
+    # 1. Header Block (Solid Green)
+    header_data = [
+        [Paragraph("OFFICIAL SECURITY PASSPORT", style_title)],
+        [Paragraph("CRYPTOGRAPHIC ERADICATION CERTIFICATE [ ZERO-BIT SECURE ]", style_subtitle)]
+    ]
     header_table = Table(header_data, colWidths=[doc.width])
     header_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), pastel_green),
-        ('BOX', (0, 0), (-1, -1), 4, colors.black),
-        ('TOPPADDING', (0, 0), (-1, -1), 15),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 15),
+        ('BACKGROUND', (0, 0), (-1, -1), trust_green),
+        ('BOX', (0, 0), (-1, -1), 3, text_white),
+        ('TOPPADDING', (0, 0), (-1, -1), 20),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 20),
     ]))
     elements.append(header_table)
-    elements.append(Spacer(1, 25))
+    elements.append(Spacer(1, 20))
 
-    # 3. Identity Bar
-    id_data = [[Paragraph(f"ID: {device_id} | DATE: {date}", style_id)]]
-    id_table = Table(id_data, colWidths=[doc.width])
+    # 2. Barcode & ID Strip
+    barcode = code128.Code128(sha_hash[:12], barHeight=0.4*inch, barWidth=1.2)
+    
+    id_data = [
+        [barcode, Paragraph(f"CERT ID: {sha_hash[:12]}<br/>NODE: {device_id}", style_mono_yellow)]
+    ]
+    id_table = Table(id_data, colWidths=[doc.width/2, doc.width/2])
     id_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), pastel_yellow),
-        ('BOX', (0, 0), (-1, -1), 4, colors.black),
-        ('TOPPADDING', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('BOX', (0, 0), (-1, -1), 1, text_gray),
+        ('PADDING', (0, 0), (-1, -1), 10),
     ]))
     elements.append(id_table)
-    elements.append(Spacer(1, 25))
+    elements.append(Spacer(1, 30))
 
-    # 4. Data Boxes
-    def create_data_box(label, value):
-        box_content = [
-            [Paragraph(label, style_label)],
-            [Paragraph(value, style_value)]
-        ]
-        t = Table(box_content, colWidths=[doc.width - 20])
-        t.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), data_bg),
-            ('BOX', (0, 0), (-1, -1), 4, text_gray),
-            ('TOPPADDING', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-            ('LEFTPADDING', (0, 0), (-1, -1), 15),
-        ]))
-        return t
+    # 3. Core Metrics Grid
+    def metric_box(label, value, color):
+        return Table(
+            [[Paragraph(label, style_label)], [Paragraph(str(value), ParagraphStyle('V', fontName='Helvetica-Bold', fontSize=32, textColor=color))]],
+            colWidths=[doc.width/2.1]
+        )
 
-    elements.append(create_data_box("SENSITIVE DATA DETECTED:", f"{files_sensitive} OBJECTS"))
-    elements.append(Spacer(1, 15))
-    elements.append(create_data_box("SECURE DATA REMAINING:", f"{files_safe} OBJECTS"))
-    elements.append(Spacer(1, 25))
-
-    # 5. Protocol Section
-    protocol_text = [
-        [Paragraph("SANITIZATION PROTOCOL", style_label)],
-        [Paragraph("[ ANTIGRAVITY v4.0 ]", ParagraphStyle('NeoProtocol', fontName='Helvetica-Bold', fontSize=14, textColor=pastel_green, alignment=1))],
-        [Paragraph("MULTI-PASS CRYPTOGRAPHIC ERASE", ParagraphStyle('NeoProtocolSub', fontName='Helvetica', fontSize=10, textColor=text_gray, alignment=1))]
+    metrics_data = [
+        [metric_box("THREATS PURGED", files_sensitive, trust_green), metric_box("TOTAL VALIDATED", files_safe, trust_cyan)]
     ]
-    protocol_table = Table(protocol_text, colWidths=[doc.width])
+    metrics_table = Table(metrics_data, colWidths=[doc.width/2, doc.width/2])
+    metrics_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    elements.append(metrics_table)
+    elements.append(Spacer(1, 30))
+
+    # 4. Eradication Protocol Data
+    protocol_data = [
+        [Paragraph("PROTOCOL DEPLOYED", style_label), Paragraph("ANTIGRAVITY v4.2", style_mono_green)],
+        [Paragraph("VERIFIED INTEGRITY", style_label), Paragraph(f"{trust_score}% SECURE", style_value)],
+        [Paragraph("TIMESTAMP", style_label), Paragraph(date, style_mono_green)]
+    ]
+    protocol_table = Table(protocol_data, colWidths=[doc.width*0.4, doc.width*0.6])
     protocol_table.setStyle(TableStyle([
-        ('BOX', (0, 0), (-1, -1), 2, pastel_green),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LINEBELOW', (0, 0), (-1, -2), 1, colors.Color(1, 1, 1, alpha=0.1)),
         ('TOPPADDING', (0, 0), (-1, -1), 15),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 15),
-        # Reportlab doesn't easily support dashed borders on tables via TableStyle, 
-        # so we'll just use a solid line for now or a custom flowable if needed.
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
     ]))
-    # For dashed look, we can wrap it or draw it. Simple solid is safer for now.
     elements.append(protocol_table)
-    elements.append(Spacer(1, 25))
+    elements.append(Spacer(1, 40))
 
-    # 6. QR Code
+    # 5. QR Code and Signature Block
     local_ip = get_local_ip()
     verify_url = f"http://{local_ip}:8501/?verify=true&id={device_id}&hash={sha_hash}"
     qr = qrcode.QRCode(version=1, box_size=10, border=2)
     qr.add_data(verify_url)
     qr.make(fit=True)
-    qr_img = qr.make_image(fill_color="black", back_color="white")
+    qr_img = qr.make_image(fill_color="#10B981", back_color="#050B14") # Trust green on dark bg
     
     qr_buffer = BytesIO()
     qr_img.save(qr_buffer, format="PNG")
     qr_buffer.seek(0)
+    qr_reportlab = Image(qr_buffer, width=1.5*inch, height=1.5*inch)
     
-    qr_reportlab = Image(qr_buffer, width=1.3*inch, height=1.3*inch)
-    
-    qr_section = [
-        [qr_reportlab],
-        [Paragraph("AUTHENTICITY VERIFIED", ParagraphStyle('NeoAuth', fontName='Helvetica-Bold', fontSize=10, textColor=text_gray, alignment=1))]
+    sig_data = [
+        [qr_reportlab, Paragraph("<i>TrustSense Cryptographic Engine</i><br/><br/>_______________________________<br/>AUTHORIZED SIGNATURE", ParagraphStyle('Sig', fontName='Times-Italic', fontSize=14, textColor=text_gray, alignment=1))]
     ]
-    qr_table = Table(qr_section, colWidths=[doc.width])
-    qr_table.setStyle(TableStyle([
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+    sig_table = Table(sig_data, colWidths=[doc.width*0.3, doc.width*0.7])
+    sig_table.setStyle(TableStyle([
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ALIGN', (1, 0), (1, 0), 'CENTER'),
     ]))
-    elements.append(qr_table)
-    elements.append(Spacer(1, 20))
+    elements.append(sig_table)
+    elements.append(Spacer(1, 30))
 
-    # 7. Footer Hash
-    hash_data = [[Paragraph(f"SHA-256 HASH:<br/>{sha_hash}", style_hash)]]
+    # 6. Bottom Hash Ribbon
+    hash_data = [[Paragraph(f"SHA-256 SIGNATURE: {sha_hash}", ParagraphStyle('H', fontName='Courier-Bold', fontSize=8, textColor=bg_dark, alignment=1))]]
     hash_table = Table(hash_data, colWidths=[doc.width])
     hash_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), pastel_yellow),
-        ('BOX', (0, 0), (-1, -1), 4, colors.black),
-        ('TOPPADDING', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ('BACKGROUND', (0, 0), (-1, -1), trust_yellow),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
     ]))
     elements.append(hash_table)
 
-    # Background Drawing
+    # Page Background
     def add_background(canvas, doc):
         canvas.saveState()
         canvas.setFillColor(bg_dark)
         canvas.rect(0, 0, A4[0], A4[1], fill=1)
-        # Main Border
-        canvas.setStrokeColor(pastel_green)
-        canvas.setLineWidth(6)
-        canvas.rect(20, 20, A4[0]-40, A4[1]-40)
+        
+        # Cyber grid watermark (very faint)
+        canvas.setStrokeColor(colors.Color(0.023, 0.713, 0.831, alpha=0.05)) # Cyan
+        canvas.setLineWidth(0.5)
+        for i in range(0, int(A4[0]), 20):
+            canvas.line(i, 0, i, A4[1])
+        for i in range(0, int(A4[1]), 20):
+            canvas.line(0, i, A4[0], i)
+            
+        # Outer Border
+        canvas.setStrokeColor(trust_green)
+        canvas.setLineWidth(4)
+        canvas.rect(15, 15, A4[0]-30, A4[1]-30)
         canvas.restoreState()
 
     doc.build(elements, onFirstPage=add_background, onLaterPages=add_background)
-    
     return buffer.getvalue()
 
