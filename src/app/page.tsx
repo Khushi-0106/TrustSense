@@ -371,6 +371,8 @@ export default function TrustSensePage() {
               initial={{ height: 0, opacity: 0, y: 20 }}
               animate={{ height: "auto", opacity: 1, y: 0 }}
               exit={{ height: 0, opacity: 0, y: 20 }}
+              className="space-y-6 overflow-hidden"
+            >
               <div className="space-y-6 overflow-hidden">
                 {/* Visual File Categorization Graph */}
                 <div className="glass-card neo-border-cyan mb-6">
@@ -464,6 +466,7 @@ export default function TrustSensePage() {
                       <Lock className="w-12 h-12" />
                     </div>
                   </button>
+                </div>
                 </div>
               </div>
             </motion.section>
