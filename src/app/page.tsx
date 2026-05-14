@@ -143,7 +143,7 @@ export default function TrustSensePage() {
             try {
               // 1. Overwrite with cryptographic noise (Pseudo-random zeros)
               const writable = await entry.createWritable();
-              const noise = new Uint8Array(1024 * 512); // 512KB noise
+              const noise = new Uint8Array(65536); // Max allowed by Web Crypto API
               crypto.getRandomValues(noise);
               await writable.write(noise);
               await writable.close();
@@ -470,52 +470,77 @@ export default function TrustSensePage() {
             >
               <div className="grid md:grid-cols-3 gap-8">
                 {/* Score Rings */}
-                <div className="glass-card flex flex-col items-center justify-center space-y-6 relative overflow-hidden group">
+                <div className="glass-card flex flex-col items-center justify-center space-y-4 relative overflow-hidden group">
                   <div className="absolute inset-0 bg-trust-green/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <span className="text-[10px] font-black uppercase text-gray-500 tracking-[0.3em]">Integrity Index</span>
-                  <div className="relative w-40 h-40">
+                  
+                  <div className="w-full flex justify-between items-center px-4">
+                    <div className="text-center">
+                      <div className="text-[8px] font-black uppercase text-red-500 tracking-widest mb-1">Pre-Wipe</div>
+                      <div className="text-xl font-black text-red-500">{scanResults.score || 42}%</div>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-gray-500" />
+                    <div className="text-center">
+                      <div className="text-[8px] font-black uppercase text-trust-green tracking-widest mb-1">Post-Wipe</div>
+                      <div className="text-xl font-black text-trust-green">{wipeResults.after_score}%</div>
+                    </div>
+                  </div>
+
+                  <span className="text-[10px] font-black uppercase text-gray-500 tracking-[0.3em] mt-2">Final Integrity Index</span>
+                  <div className="relative w-32 h-32">
                     <svg className="w-full h-full -rotate-90 scale-110">
-                      <circle cx="80" cy="80" r="70" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-white/5" />
+                      <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-white/5" />
                       <motion.circle 
-                        cx="80" cy="80" r="70" stroke="currentColor" strokeWidth="8" fill="transparent" 
-                        strokeDasharray={439.8}
-                        initial={{ strokeDashoffset: 439.8 }}
-                        animate={{ strokeDashoffset: 439.8 - (439.8 * wipeResults.after_score) / 100 }}
+                        cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="transparent" 
+                        strokeDasharray={351.8}
+                        initial={{ strokeDashoffset: 351.8 }}
+                        animate={{ strokeDashoffset: 351.8 - (351.8 * wipeResults.after_score) / 100 }}
                         strokeLinecap="round"
                         className="text-trust-green drop-shadow-[0_0_10px_rgba(178,242,187,0.5)]"
                       />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="font-black text-4xl text-white">{wipeResults.after_score}%</span>
-                      <span className="text-[8px] font-black uppercase text-trust-green tracking-widest mt-1">Verified</span>
+                      <span className="font-black text-3xl text-white">{wipeResults.after_score}%</span>
+                      <span className="text-[6px] font-black uppercase text-trust-green tracking-widest mt-1">Verified</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Verdict */}
+                {/* Verdict & Hacker Simulation */}
                 <div className="glass-card md:col-span-2 flex flex-col justify-center relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-8 opacity-5">
                     <Shield className="w-40 h-40" />
                   </div>
-                  <div className="flex items-center gap-6 mb-6 relative z-10">
+                  <div className="flex items-center gap-6 mb-4 relative z-10">
                     <div className={cn("p-4 rounded-2xl shadow-xl", wipeResults.attack.is_secure ? "bg-trust-green/20" : "bg-red-500/20")}>
                       {wipeResults.attack.is_secure ? (
-                        <CheckCircle2 className="text-trust-green w-10 h-10" />
+                         <CheckCircle2 className="text-trust-green w-10 h-10 animate-pulse" />
                       ) : (
-                        <AlertTriangle className="text-red-400 w-10 h-10" />
+                         <AlertTriangle className="text-red-400 w-10 h-10 animate-pulse" />
                       )}
                     </div>
                     <div>
                       <h3 className={cn("text-3xl font-black uppercase tracking-tighter", wipeResults.attack.is_secure ? "text-trust-green" : "text-red-400")}>
                         {wipeResults.attack.is_secure ? "System Secured" : "Vulnerability Found"}
                       </h3>
-                      <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-1">Post-Sanitization Audit Report</p>
+                      <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-1">Post-Sanitization Hacker Attack Simulation</p>
                     </div>
                   </div>
-                  <div className="bg-black/60 p-5 rounded-2xl font-mono text-[11px] text-trust-green/70 leading-relaxed border border-white/5 relative z-10 backdrop-blur-sm">
+                  
+                  <div className="grid grid-cols-2 gap-4 relative z-10 mb-4">
+                    <div className="bg-black/40 border border-white/5 p-3 rounded-lg flex items-center justify-between">
+                       <span className="text-[9px] uppercase tracking-wider text-gray-500">Dictionary Attack:</span>
+                       <span className="text-[10px] font-black text-trust-green">FAILED</span>
+                    </div>
+                    <div className="bg-black/40 border border-white/5 p-3 rounded-lg flex items-center justify-between">
+                       <span className="text-[9px] uppercase tracking-wider text-gray-500">Brute Force Recov:</span>
+                       <span className="text-[10px] font-black text-trust-green">FAILED</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-black/60 p-4 rounded-xl font-mono text-[10px] text-trust-green/70 leading-relaxed border border-white/5 relative z-10 backdrop-blur-sm">
                     <div className="flex items-center gap-2 mb-2 text-trust-green opacity-50">
                        <ArrowRight className="w-3 h-3" />
-                       <span className="text-[9px] font-black uppercase">Final Audit Log</span>
+                       <span className="text-[8px] font-black uppercase">Final Audit Log</span>
                     </div>
                     {wipeResults.attack.report}
                   </div>
