@@ -137,6 +137,48 @@ export default function TrustSensePage() {
     addLog("SHREDDING PROTOCOL INITIATED.");
     
     if (activeDirHandle) {
+      // BACKUP PHASE: Copy all files to a user-selected backup folder
+      if (doBackup) {
+        try {
+          addLog("BACKUP MODE: Select a destination folder for secure backup...");
+          setProgressText("Awaiting backup destination selection...");
+          // @ts-ignore
+          const backupDirHandle = await window.showDirectoryPicker({ mode: "readwrite", startIn: "downloads" });
+          addLog(`Backup target: ${backupDirHandle.name}`);
+          setProgressText("Copying files to backup location...");
+          
+          let backedUp = 0;
+          const backupEntry = async (sourceHandle: any, destHandle: any) => {
+            for await (const entry of sourceHandle.values()) {
+              if (entry.kind === 'file') {
+                try {
+                  const file = await entry.getFile();
+                  const destFile = await destHandle.getFileHandle(file.name, { create: true });
+                  const writable = await destFile.createWritable();
+                  await writable.write(await file.arrayBuffer());
+                  await writable.close();
+                  backedUp++;
+                  addLog(`[BACKED UP] ${file.name}`);
+                } catch (e) {
+                  addLog(`[BACKUP SKIP] ${entry.name}`);
+                }
+              } else if (entry.kind === 'directory') {
+                const subDir = await destHandle.getDirectoryHandle(entry.name, { create: true });
+                await backupEntry(entry, subDir);
+              }
+            }
+          };
+          
+          await backupEntry(activeDirHandle, backupDirHandle);
+          addLog(`BACKUP COMPLETE: ${backedUp} files saved to ${backupDirHandle.name}.`);
+          setProgressText("Backup complete. Beginning eradication...");
+          await new Promise(r => setTimeout(r, 1000));
+        } catch (e) {
+          addLog("BACKUP CANCELLED or FAILED. Proceeding with wipe anyway.");
+          console.error("Backup failed:", e);
+        }
+      }
+      
       addLog("Executing client-side cryptographic wipe on local files...");
       setProgressText("Overwriting local file segments with cryptographic noise...");
       
