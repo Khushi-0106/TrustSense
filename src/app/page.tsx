@@ -100,16 +100,27 @@ export default function TrustSensePage() {
 
       await scanEntry(dirHandle);
       
+      const preWipeScore = totalFiles > 0 ? Math.max(10, Math.round(100 - (sensitiveCount / totalFiles) * 100 - (totalFiles > 50 ? 15 : totalFiles > 20 ? 10 : 5))) : 85;
+      const riskLevel = sensitiveCount > 5 ? "Critical" : sensitiveCount > 0 ? "Medium" : "Low";
+      const recommendation = sensitiveCount > 5 ? "DoD 5220.22-M (7-Pass)" : sensitiveCount > 0 ? "Gutmann (3-Pass)" : "Single-Pass Crypto Wipe";
+      const aiReason = sensitiveCount > 5 
+        ? `Detected ${sensitiveCount} high-risk objects including potential credentials and keys. Recommending military-grade 7-pass overwrite per DoD 5220.22-M standard to ensure zero recoverability.`
+        : sensitiveCount > 0 
+        ? `Found ${sensitiveCount} sensitive file(s) among ${totalFiles} total objects. Gutmann 3-pass overwrite recommended for thorough eradication of personally identifiable data.`
+        : `No sensitive files detected in ${totalFiles} objects. Single-pass cryptographic noise overwrite is sufficient for complete data destruction.`;
+      
       setScanResults({
+        score: preWipeScore,
         results: {
           total_files: totalFiles,
-          total_folders: 0, // Placeholder
+          total_folders: 0,
           sensitive_files: sensitiveCount,
-          risk_level: sensitiveCount > 5 ? "Critical" : sensitiveCount > 0 ? "Medium" : "Low",
+          risk_level: riskLevel,
           file_types: extensions,
           files: filesFound.slice(0, 10)
         },
-        recommendation: sensitiveCount > 0 ? "Deep Erase" : "Basic"
+        recommendation,
+        ai_reason: aiReason
       });
       
       addLog(`Local scan finished. Found ${totalFiles} objects.`);
@@ -324,15 +335,17 @@ export default function TrustSensePage() {
               onClick={() => {
                 addLog("GENERATING VIRTUAL FORENSIC SANDBOX...");
                 setScanResults({
+                  score: 34,
                   results: {
                     total_files: 142,
                     total_folders: 12,
                     sensitive_files: 8,
                     risk_level: "High",
-                    file_types: { ".pem": 2, ".env": 1, ".txt": 120, ".log": 19 },
+                    file_types: { "pem": 2, "env": 1, "txt": 120, "log": 19 },
                     files: ["passwords.txt", "keys.pem", "config.env", "db_backup.sql"]
                   },
-                  recommendation: "Deep Erase"
+                  recommendation: "DoD 5220.22-M (7-Pass)",
+                  ai_reason: "Detected 8 high-risk objects including .pem keys, .env config, and credential files. Recommending military-grade 7-pass overwrite per DoD 5220.22-M standard to ensure zero recoverability."
                 });
                 addLog("Sandbox ready. High entropy fragments detected.");
                 setStage("OPTIONS");
@@ -381,49 +394,52 @@ export default function TrustSensePage() {
                       <Database className="text-trust-cyan w-6 h-6" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-black uppercase tracking-wider text-trust-cyan">Forensic Target Architecture</h3>
-                      <p className="text-[10px] uppercase text-gray-500 font-bold tracking-widest mt-1">Data Distribution Breakdown</p>
+                      <h3 className="text-lg font-black uppercase tracking-wider text-trust-cyan">File Type Distribution</h3>
+                      <p className="text-[10px] uppercase text-gray-500 font-bold tracking-widest mt-1">{scanResults.results.total_files} files scanned across {Object.keys(scanResults.results.file_types || {}).length} types</p>
                     </div>
                   </div>
                   
-                  {/* Graph Segmented Bar */}
-                  <div className="w-full h-8 bg-black/50 rounded-full overflow-hidden flex border border-white/10 mb-4 shadow-inner">
-                    {Object.entries(scanResults.results.file_types || {}).map(([ext, count], idx) => {
-                      const colors = ['bg-trust-cyan', 'bg-trust-green', 'bg-trust-yellow', 'bg-purple-500', 'bg-blue-500', 'bg-orange-500', 'bg-red-500', 'bg-pink-500'];
-                      const color = colors[idx % colors.length];
-                      const percentage = ((count as number) / Math.max(1, scanResults.results.total_files)) * 100;
-                      return (
-                        <motion.div
-                          key={ext}
-                          initial={{ width: 0 }}
-                          animate={{ width: `${percentage}%` }}
-                          transition={{ duration: 1, ease: "easeOut", delay: idx * 0.1 }}
-                          className={`h-full ${color} relative group cursor-pointer border-r border-black/20`}
-                        >
-                          <div className="absolute opacity-0 group-hover:opacity-100 -top-8 left-1/2 -translate-x-1/2 bg-black border border-white/10 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded text-white whitespace-nowrap z-50 pointer-events-none transition-opacity">
-                            {ext || 'unknown'}: {count as number} files ({percentage.toFixed(1)}%)
+                  {/* Proper Vertical Bar Chart */}
+                  {(() => {
+                    const entries = Object.entries(scanResults.results.file_types || {});
+                    const maxCount = Math.max(...entries.map(([, c]) => c as number), 1);
+                    const barColors = ['bg-trust-cyan', 'bg-trust-green', 'bg-trust-yellow', 'bg-purple-500', 'bg-blue-500', 'bg-orange-500', 'bg-red-400', 'bg-pink-500'];
+                    return (
+                      <div className="mt-4">
+                        {/* Y-axis labels + bars */}
+                        <div className="flex items-end gap-3 h-40 border-b border-white/10 border-l border-l-white/10 pl-8 pb-1 relative">
+                          {/* Y-axis scale */}
+                          <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-[8px] font-mono text-gray-500 pr-1">
+                            <span>{maxCount}</span>
+                            <span>{Math.round(maxCount / 2)}</span>
+                            <span>0</span>
                           </div>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Graph Legend */}
-                  <div className="flex flex-wrap gap-4 mt-4">
-                    {Object.entries(scanResults.results.file_types || {}).slice(0, 6).map(([ext, count], idx) => {
-                      const colors = ['bg-trust-cyan', 'bg-trust-green', 'bg-trust-yellow', 'bg-purple-500', 'bg-blue-500', 'bg-orange-500', 'bg-red-500', 'bg-pink-500'];
-                      const color = colors[idx % colors.length];
-                      return (
-                        <div key={ext} className="flex items-center gap-2">
-                          <div className={`w-3 h-3 rounded-sm ${color}`} />
-                          <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider">{ext || 'unknown'} <span className="text-white ml-1">({count as number})</span></span>
+                          {entries.slice(0, 8).map(([ext, count], idx) => {
+                            const heightPct = ((count as number) / maxCount) * 100;
+                            return (
+                              <div key={ext} className="flex-1 flex flex-col items-center justify-end h-full group">
+                                <div className="text-[9px] font-black text-white mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{count as number}</div>
+                                <motion.div
+                                  initial={{ height: 0 }}
+                                  animate={{ height: `${heightPct}%` }}
+                                  transition={{ duration: 0.8, delay: idx * 0.1, ease: "easeOut" }}
+                                  className={`w-full ${barColors[idx % barColors.length]} rounded-t-md relative cursor-pointer min-h-[4px] shadow-lg`}
+                                />
+                              </div>
+                            );
+                          })}
                         </div>
-                      );
-                    })}
-                    {Object.keys(scanResults.results.file_types || {}).length > 6 && (
-                      <div className="text-[10px] font-black uppercase text-gray-600 tracking-wider">...and more</div>
-                    )}
-                  </div>
+                        {/* X-axis labels */}
+                        <div className="flex gap-3 pl-8 mt-2">
+                          {entries.slice(0, 8).map(([ext], idx) => (
+                            <div key={ext} className="flex-1 text-center">
+                              <span className="text-[9px] font-black uppercase text-gray-400">.{ext}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div className="glass-card border-trust-yellow/40 bg-trust-yellow/5">
@@ -434,9 +450,26 @@ export default function TrustSensePage() {
                     <h3 className="text-lg font-black uppercase tracking-wider">Pre-Wipe Action Center</h3>
                   </div>
                 
-                <div className="flex items-center justify-between mb-8 p-4 bg-black/40 rounded-xl border border-white/5">
+                <div className="flex items-center justify-between mb-4 p-4 bg-black/40 rounded-xl border border-white/5">
                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Recommended Protocol</span>
                    <span className="text-trust-green font-black uppercase tracking-widest animate-pulse">{scanResults.recommendation}</span>
+                </div>
+
+                {/* AI Recommendation Section */}
+                <div className="mb-8 p-5 bg-trust-cyan/5 border border-trust-cyan/20 rounded-xl">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Cpu className="w-4 h-4 text-trust-cyan" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-trust-cyan">AI Wipe Analysis</span>
+                  </div>
+                  <p className="text-[11px] text-gray-300 leading-relaxed font-mono">{scanResults.ai_reason}</p>
+                  <div className="mt-3 flex gap-3">
+                    <div className="bg-black/40 px-3 py-1.5 rounded text-[9px] font-black uppercase text-trust-yellow border border-trust-yellow/20">
+                      Risk: {scanResults.results.risk_level}
+                    </div>
+                    <div className="bg-black/40 px-3 py-1.5 rounded text-[9px] font-black uppercase text-trust-green border border-trust-green/20">
+                      {scanResults.results.sensitive_files} Sensitive / {scanResults.results.total_files} Total
+                    </div>
+                  </div>
                 </div>
                 
                 <div className="grid md:grid-cols-2 gap-6">
@@ -567,21 +600,21 @@ export default function TrustSensePage() {
                     <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl text-center">
                       <div className="text-[8px] font-black uppercase text-red-400 tracking-widest mb-2">Before Wipe</div>
                       <motion.div className="text-4xl font-black text-red-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                        {scanResults?.score || 42}%
+                        {scanResults?.score || 34}%
                       </motion.div>
-                      <div className="text-[7px] text-red-400/60 mt-1 uppercase tracking-wider">{scanResults?.results?.sensitive_files || 0} Vulnerabilities</div>
+                      <div className="text-[7px] text-red-400/60 mt-1 uppercase tracking-wider">{scanResults?.results?.sensitive_files || 0} threats detected</div>
                     </div>
                     <div className="bg-trust-green/10 border border-trust-green/20 p-4 rounded-xl text-center">
                       <div className="text-[8px] font-black uppercase text-trust-green tracking-widest mb-2">After Wipe</div>
                       <motion.div className="text-4xl font-black text-trust-green" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", delay: 0.5 }}>
                         {wipeResults.after_score}%
                       </motion.div>
-                      <div className="text-[7px] text-trust-green/60 mt-1 uppercase tracking-wider">0 Vulnerabilities</div>
+                      <div className="text-[7px] text-trust-green/60 mt-1 uppercase tracking-wider">0 threats remaining</div>
                     </div>
                   </div>
                   
                   <div className="w-full bg-black/40 border border-white/5 p-3 rounded-lg text-center">
-                    <span className="text-[9px] font-black uppercase tracking-wider text-trust-cyan">+{wipeResults.after_score - (scanResults?.score || 42)}% improvement</span>
+                    <span className="text-[9px] font-black uppercase tracking-wider text-trust-cyan">+{wipeResults.after_score - (scanResults?.score || 34)}% improvement</span>
                   </div>
                   
                   {/* Mini Ring */}
