@@ -104,20 +104,45 @@ def generate_neo_pdf(data):
 
         elements.append(Spacer(1, 30))
 
-        # ── STATS & MRZ ──
-        s_row = Table([[Table([[Paragraph(str(files_sens), sty('SN', fontName='Helvetica-Bold', fontSize=24, textColor=RED, alignment=1))], [Paragraph("THREATS PURGED", sty('SL', fontName='Helvetica-Bold', fontSize=7, textColor=GRAY, alignment=1))]], colWidths=[W/3]),
-                        Table([[Paragraph("VERIFIED", sty('SN', fontName='Helvetica-Bold', fontSize=24, textColor=GREEN, alignment=1))], [Paragraph("INTEGRITY STATUS", sty('SL', fontName='Helvetica-Bold', fontSize=7, textColor=GRAY, alignment=1))]], colWidths=[W/3])]], colWidths=[W/2, W/2])
+        # ── STATS SECTION ──
+        stat_data = [
+            [Paragraph(str(files_sens), sty('SN', fontName='Helvetica-Bold', fontSize=28, textColor=RED, alignment=1)),
+             Paragraph("VERIFIED", sty('SN', fontName='Helvetica-Bold', fontSize=28, textColor=GREEN, alignment=1))],
+            [Paragraph("THREATS PURGED", sty('SL', fontName='Helvetica-Bold', fontSize=8, textColor=GRAY, alignment=1)),
+             Paragraph("INTEGRITY STATUS", sty('SL', fontName='Helvetica-Bold', fontSize=8, textColor=GRAY, alignment=1))]
+        ]
+        s_row = Table(stat_data, colWidths=[W/2, W/2])
+        s_row.setStyle(TableStyle([
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            ('BOTTOMPADDING', (0,0), (-1,0), 0),
+            ('TOPPADDING', (0,1), (-1,1), 0),
+        ]))
         elements.append(s_row)
         
-        elements.append(Spacer(1, 40))
+        elements.append(Spacer(1, 45))
         
+        # ── MRZ FOOTER ──
         mrz_text = f"P<TSA{device_id.replace('-',''):<20}{'<'*10}\n{sha_hash[:20].upper()}{'<'*5}260516"
-        elements.append(Table([[Paragraph(mrz_text.replace('\n', '<br/>'), s_mrz)]], colWidths=[W], style=[('BACKGROUND', (0,0),(-1,-1), colors.Color(0,0,0,alpha=0.05)), ('TOPPADDING', (0,0),(-1,-1), 10), ('BOTTOMPADDING', (0,0),(-1,-1), 10)]))
+        mrz_p = Paragraph(mrz_text.replace('\n', '<br/>'), sty('MZ', fontName='Courier', fontSize=9, textColor=GRAY, leading=11))
+        mrz_tbl = Table([[mrz_p]], colWidths=[W])
+        mrz_tbl.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), colors.Color(0,0,0,alpha=0.04)),
+            ('BOX', (0,0), (-1,-1), 0.5, colors.Color(0,0,0,alpha=0.1)),
+            ('TOPPADDING', (0,0), (-1,-1), 15),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 15),
+            ('LEFTPADDING', (0,0), (-1,-1), 20),
+        ]))
+        elements.append(mrz_tbl)
 
         def add_bg(canvas, doc):
             canvas.saveState()
             canvas.setFillColor(PARCHMENT)
             canvas.rect(0, 0, A4[0], A4[1], fill=1)
+            # Add a subtle border
+            canvas.setStrokeColor(GOLD)
+            canvas.setLineWidth(1)
+            canvas.rect(20, 20, A4[0]-40, A4[1]-40)
             canvas.restoreState()
 
         doc.build(elements, onFirstPage=add_bg, onLaterPages=add_bg)
