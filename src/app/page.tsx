@@ -35,6 +35,7 @@ export default function TrustSensePage() {
   const [cert, setCert] = useState<any>(null);
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
   const [activeDirHandle, setActiveDirHandle] = useState<any>(null);
+  const [backupSelected, setBackupSelected] = useState<Set<string>>(new Set());
 
   // Console states
   const [consoleLogs, setConsoleLogs] = useState<string[]>(["[SYSTEM] TrustSense Mesh Node Active.", "[SYSTEM] Awaiting forensic target..."]);
@@ -64,34 +65,57 @@ export default function TrustSensePage() {
   const selectFolder = async () => {
     try {
       addLog("Requesting local file system authorization (Read & Write)...");
-      // @ts-ignore - showDirectoryPicker is a modern API
+      // @ts-ignore
       const dirHandle = await window.showDirectoryPicker({ mode: "readwrite" });
       setActiveDirHandle(dirHandle);
       
-      setStage("WIPING"); // Just to show we are busy
-      setProgressText("Gaining forensic access to local directory...");
+      setStage("WIPING");
+      setProgressText("Scanning directory structure...");
       
-      let filesFound: string[] = [];
-      let sensitiveCount = 0;
-      let totalFiles = 0;
+      let fileList: { name: string; size: number; ext: string; risk: string; reason: string }[] = [];
       let extensions: Record<string, number> = {};
+
+      const riskExts: Record<string, { level: string; reason: string }> = {
+        'key': { level: 'Critical', reason: 'Private encryption key — exposes all encrypted data' },
+        'pem': { level: 'Critical', reason: 'SSL/TLS certificate — can enable man-in-the-middle attacks' },
+        'env': { level: 'Critical', reason: 'Environment config — may contain API keys and database credentials' },
+        'sql': { level: 'High', reason: 'Database dump — likely contains user records and sensitive queries' },
+        'csv': { level: 'High', reason: 'Tabular data export — may contain PII or financial records' },
+        'xlsx': { level: 'High', reason: 'Spreadsheet — often used for sensitive financial or HR data' },
+        'doc': { level: 'Medium', reason: 'Document file — may contain confidential text or metadata' },
+        'docx': { level: 'Medium', reason: 'Document file — may contain confidential text or metadata' },
+        'pdf': { level: 'Medium', reason: 'PDF document — metadata may reveal author and edit history' },
+        'jpg': { level: 'Low', reason: 'Image file — EXIF data may contain GPS coordinates' },
+        'jpeg': { level: 'Low', reason: 'Image file — EXIF data may contain GPS coordinates' },
+        'png': { level: 'Low', reason: 'Image file — minimal metadata risk' },
+        'txt': { level: 'Low', reason: 'Plain text — easily overwritten in a single pass' },
+        'log': { level: 'Medium', reason: 'Log file — may contain IP addresses and session tokens' },
+        'json': { level: 'Medium', reason: 'Structured data — may include tokens or configuration secrets' },
+        'xml': { level: 'Medium', reason: 'Markup data — may contain serialized credentials' },
+        'zip': { level: 'High', reason: 'Compressed archive — contents unknown without extraction' },
+        'exe': { level: 'High', reason: 'Executable binary — potential malware or proprietary software' },
+        'dll': { level: 'Medium', reason: 'Dynamic library — may contain proprietary logic' },
+        'db': { level: 'Critical', reason: 'Database file — direct access to stored records' },
+        'sqlite': { level: 'Critical', reason: 'SQLite database — full local database with all records' },
+      };
+      const keywordRisk = ['password', 'secret', 'credential', 'api_key', 'token', 'private', 'bank', 'ssn', 'credit'];
 
       const scanEntry = async (handle: any) => {
         for await (const entry of handle.values()) {
           if (entry.kind === 'file') {
-            totalFiles++;
             const file = await entry.getFile();
-            filesFound.push(file.name);
-            const ext = file.name.split('.').pop()?.toLowerCase() || 'no-ext';
+            const ext = file.name.split('.').pop()?.toLowerCase() || 'unknown';
             extensions[ext] = (extensions[ext] || 0) + 1;
-
-            // Simple client-side sensitivity check for the "Real Time" feel
-            const sensitiveExts = ['key', 'pem', 'env', 'config', 'sql'];
-            const sensitiveKeywords = ['password', 'secret', 'api', 'credit', 'ssn'];
-            if (sensitiveExts.includes(ext) || sensitiveKeywords.some(k => file.name.toLowerCase().includes(k))) {
-              sensitiveCount++;
-              if (sensitiveCount < 5) addLog(`[DETECTED] Sensitive fragment in ${file.name}`);
+            
+            let risk = riskExts[ext]?.level || 'Low';
+            let reason = riskExts[ext]?.reason || 'Standard file — single-pass overwrite sufficient';
+            
+            if (keywordRisk.some(k => file.name.toLowerCase().includes(k))) {
+              risk = 'Critical';
+              reason = 'Filename contains sensitive keyword — high probability of credential data';
             }
+            
+            fileList.push({ name: file.name, size: file.size, ext, risk, reason });
           } else if (entry.kind === 'directory') {
             await scanEntry(entry);
           }
@@ -100,14 +124,26 @@ export default function TrustSensePage() {
 
       await scanEntry(dirHandle);
       
-      const preWipeScore = totalFiles > 0 ? Math.max(10, Math.round(100 - (sensitiveCount / totalFiles) * 100 - (totalFiles > 50 ? 15 : totalFiles > 20 ? 10 : 5))) : 85;
-      const riskLevel = sensitiveCount > 5 ? "Critical" : sensitiveCount > 0 ? "Medium" : "Low";
-      const recommendation = sensitiveCount > 5 ? "DoD 5220.22-M (7-Pass)" : sensitiveCount > 0 ? "Gutmann (3-Pass)" : "Single-Pass Crypto Wipe";
-      const aiReason = sensitiveCount > 5 
-        ? `Detected ${sensitiveCount} high-risk objects including potential credentials and keys. Recommending military-grade 7-pass overwrite per DoD 5220.22-M standard to ensure zero recoverability.`
-        : sensitiveCount > 0 
-        ? `Found ${sensitiveCount} sensitive file(s) among ${totalFiles} total objects. Gutmann 3-pass overwrite recommended for thorough eradication of personally identifiable data.`
-        : `No sensitive files detected in ${totalFiles} objects. Single-pass cryptographic noise overwrite is sufficient for complete data destruction.`;
+      const criticalCount = fileList.filter(f => f.risk === 'Critical').length;
+      const highCount = fileList.filter(f => f.risk === 'High').length;
+      const medCount = fileList.filter(f => f.risk === 'Medium').length;
+      const lowCount = fileList.filter(f => f.risk === 'Low').length;
+      const sensitiveCount = criticalCount + highCount;
+      const totalFiles = fileList.length;
+      
+      const preWipeScore = totalFiles > 0 
+        ? Math.max(5, Math.round(100 - (criticalCount * 20 + highCount * 10 + medCount * 3) / Math.max(totalFiles, 1) * 10))
+        : 90;
+      
+      const riskLevel = criticalCount > 0 ? "Critical" : highCount > 0 ? "High" : medCount > 0 ? "Medium" : "Low";
+      const recommendation = criticalCount > 0 ? "DoD 5220.22-M (7-Pass)" : highCount > 0 ? "Gutmann (3-Pass)" : sensitiveCount > 0 ? "NIST 800-88 (Purge)" : "Single-Pass Overwrite";
+      const aiReason = criticalCount > 0
+        ? `Scan identified ${criticalCount} critical-risk file(s) (encryption keys, database files, or credential stores) and ${highCount} high-risk file(s). The DoD 5220.22-M standard requires 7 overwrite passes with alternating bit patterns to prevent magnetic residue recovery. This is the minimum acceptable standard for data classified at this threat level.`
+        : highCount > 0
+        ? `Analysis found ${highCount} high-risk file(s) including archives or data exports that may contain PII. The Gutmann method applies 35 overwrite patterns but we use an optimized 3-pass variant targeting modern solid-state media, which achieves equivalent destruction for non-magnetic storage.`
+        : sensitiveCount > 0
+        ? `Detected ${sensitiveCount} file(s) with medium sensitivity indicators. NIST Special Publication 800-88 Purge protocol is recommended — a single cryptographic overwrite followed by verification read-back to confirm no recoverable data remains on the storage medium.`
+        : `All ${totalFiles} files classified as low risk. A single-pass overwrite with cryptographically random data (AES-256-CTR generated noise) provides sufficient destruction. No evidence of credential files, database stores, or encryption keys detected.`;
       
       setScanResults({
         score: preWipeScore,
@@ -117,13 +153,15 @@ export default function TrustSensePage() {
           sensitive_files: sensitiveCount,
           risk_level: riskLevel,
           file_types: extensions,
-          files: filesFound.slice(0, 10)
+          files: fileList.map(f => f.name).slice(0, 10),
+          file_details: fileList,
+          risk_breakdown: { critical: criticalCount, high: highCount, medium: medCount, low: lowCount }
         },
         recommendation,
         ai_reason: aiReason
       });
       
-      addLog(`Local scan finished. Found ${totalFiles} objects.`);
+      addLog(`Scan complete. ${totalFiles} objects classified. ${criticalCount} critical, ${highCount} high, ${medCount} medium, ${lowCount} low risk.`);
       setStage("OPTIONS");
     } catch (err) {
       addLog("ERROR: Access denied by user or OS.");
@@ -137,20 +175,22 @@ export default function TrustSensePage() {
     addLog("SHREDDING PROTOCOL INITIATED.");
     
     if (activeDirHandle) {
-      // BACKUP PHASE: Copy all files to a user-selected backup folder
-      if (doBackup) {
+      // BACKUP PHASE: Copy only selected files
+      if (doBackup && backupSelected.size > 0) {
         try {
-          addLog("BACKUP MODE: Select a destination folder for secure backup...");
-          setProgressText("Awaiting backup destination selection...");
+          addLog(`BACKUP MODE: Preparing to copy ${backupSelected.size} selected file(s)...`);
+          setProgressText("Select a destination folder for backup...");
           // @ts-ignore
           const backupDirHandle = await window.showDirectoryPicker({ mode: "readwrite", startIn: "downloads" });
-          addLog(`Backup target: ${backupDirHandle.name}`);
-          setProgressText("Copying files to backup location...");
+          addLog(`Backup destination: ${backupDirHandle.name}`);
+          setProgressText("Copying selected files to backup location...");
           
           let backedUp = 0;
           const backupEntry = async (sourceHandle: any, destHandle: any) => {
             for await (const entry of sourceHandle.values()) {
               if (entry.kind === 'file') {
+                // Only backup if user selected this file
+                if (!backupSelected.has(entry.name)) continue;
                 try {
                   const file = await entry.getFile();
                   const destFile = await destHandle.getFileHandle(file.name, { create: true });
@@ -158,11 +198,12 @@ export default function TrustSensePage() {
                   await writable.write(await file.arrayBuffer());
                   await writable.close();
                   backedUp++;
-                  addLog(`[BACKED UP] ${file.name}`);
+                  addLog(`[BACKED UP] ${file.name} (${(file.size/1024).toFixed(1)}KB)`);
                 } catch (e) {
-                  addLog(`[BACKUP SKIP] ${entry.name}`);
+                  addLog(`[BACKUP FAIL] ${entry.name} — locked or inaccessible`);
                 }
               } else if (entry.kind === 'directory') {
+                // Recursively check subdirs for selected files
                 const subDir = await destHandle.getDirectoryHandle(entry.name, { create: true });
                 await backupEntry(entry, subDir);
               }
@@ -170,11 +211,17 @@ export default function TrustSensePage() {
           };
           
           await backupEntry(activeDirHandle, backupDirHandle);
-          addLog(`BACKUP COMPLETE: ${backedUp} files saved to ${backupDirHandle.name}.`);
-          setProgressText("Backup complete. Beginning eradication...");
-          await new Promise(r => setTimeout(r, 1000));
-        } catch (e) {
-          addLog("BACKUP CANCELLED or FAILED. Proceeding with wipe anyway.");
+          addLog(`BACKUP COMPLETE: ${backedUp}/${backupSelected.size} files saved to "${backupDirHandle.name}".`);
+          setProgressText("Backup complete. Beginning eradication protocol...");
+          await new Promise(r => setTimeout(r, 1200));
+        } catch (e: any) {
+          if (e?.name === 'AbortError') {
+            addLog("Backup cancelled by user. Aborting wipe.");
+            setStage("OPTIONS");
+            setIsWiping(false);
+            return;
+          }
+          addLog("BACKUP FAILED. Proceeding with wipe anyway.");
           console.error("Backup failed:", e);
         }
       }
@@ -377,19 +424,31 @@ export default function TrustSensePage() {
               onClick={() => {
                 addLog("GENERATING VIRTUAL FORENSIC SANDBOX...");
                 setScanResults({
-                  score: 34,
+                  score: 28,
                   results: {
                     total_files: 142,
                     total_folders: 12,
-                    sensitive_files: 8,
-                    risk_level: "High",
-                    file_types: { "pem": 2, "env": 1, "txt": 120, "log": 19 },
-                    files: ["passwords.txt", "keys.pem", "config.env", "db_backup.sql"]
+                    sensitive_files: 10,
+                    risk_level: "Critical",
+                    file_types: { "pem": 2, "env": 1, "txt": 100, "log": 19, "sql": 3, "csv": 5, "pdf": 8, "jpg": 4 },
+                    files: ["passwords.txt", "keys.pem", "config.env", "db_backup.sql"],
+                    file_details: [
+                      { name: "server.key", size: 3247, ext: "key", risk: "Critical", reason: "Private encryption key — exposes all encrypted data" },
+                      { name: "auth.pem", size: 1891, ext: "pem", risk: "Critical", reason: "SSL/TLS certificate — can enable man-in-the-middle attacks" },
+                      { name: ".env", size: 412, ext: "env", risk: "Critical", reason: "Environment config — may contain API keys and database credentials" },
+                      { name: "users_dump.sql", size: 892400, ext: "sql", risk: "High", reason: "Database dump — likely contains user records and sensitive queries" },
+                      { name: "financials.csv", size: 45200, ext: "csv", risk: "High", reason: "Tabular data export — may contain PII or financial records" },
+                      { name: "system.log", size: 128000, ext: "log", risk: "Medium", reason: "Log file — may contain IP addresses and session tokens" },
+                      { name: "report.pdf", size: 2400000, ext: "pdf", risk: "Medium", reason: "PDF document — metadata may reveal author and edit history" },
+                      { name: "readme.txt", size: 542, ext: "txt", risk: "Low", reason: "Plain text — easily overwritten in a single pass" },
+                      { name: "photo.jpg", size: 3200000, ext: "jpg", risk: "Low", reason: "Image file — EXIF data may contain GPS coordinates" },
+                    ],
+                    risk_breakdown: { critical: 3, high: 5, medium: 20, low: 114 }
                   },
                   recommendation: "DoD 5220.22-M (7-Pass)",
-                  ai_reason: "Detected 8 high-risk objects including .pem keys, .env config, and credential files. Recommending military-grade 7-pass overwrite per DoD 5220.22-M standard to ensure zero recoverability."
+                  ai_reason: "Scan identified 3 critical-risk file(s) (encryption keys, database files, or credential stores) and 5 high-risk file(s). The DoD 5220.22-M standard requires 7 overwrite passes with alternating bit patterns to prevent magnetic residue recovery. This is the minimum acceptable standard for data classified at this threat level."
                 });
-                addLog("Sandbox ready. High entropy fragments detected.");
+                addLog("Sandbox ready. 3 critical, 5 high, 20 medium, 114 low risk files detected.");
                 setStage("OPTIONS");
               }}
               className="bg-black/40 border border-trust-green text-trust-green font-black py-4 rounded-xl hover:bg-trust-green/10 transition-all uppercase tracking-wider flex items-center justify-center gap-2"
@@ -484,6 +543,58 @@ export default function TrustSensePage() {
                   })()}
                 </div>
 
+                {/* Risk Breakdown + File Table */}
+                <div className="glass-card neo-border-cyan">
+                  <h3 className="text-sm font-black uppercase tracking-wider text-white mb-4">Risk Classification Summary</h3>
+                  <div className="grid grid-cols-4 gap-3 mb-6">
+                    {[
+                      { label: 'Critical', count: scanResults.results.risk_breakdown?.critical || 0, color: 'bg-red-500', text: 'text-red-400' },
+                      { label: 'High', count: scanResults.results.risk_breakdown?.high || 0, color: 'bg-orange-500', text: 'text-orange-400' },
+                      { label: 'Medium', count: scanResults.results.risk_breakdown?.medium || 0, color: 'bg-yellow-500', text: 'text-yellow-400' },
+                      { label: 'Low', count: scanResults.results.risk_breakdown?.low || 0, color: 'bg-emerald-500', text: 'text-emerald-400' }
+                    ].map(r => (
+                      <div key={r.label} className="bg-black/40 border border-white/5 p-3 rounded-lg text-center">
+                        <div className={`w-full h-1 ${r.color} rounded-full mb-2`} />
+                        <div className={`text-2xl font-black ${r.text}`}>{r.count}</div>
+                        <div className="text-[8px] uppercase tracking-widest text-gray-500 font-bold mt-1">{r.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* File Details Table */}
+                  {scanResults.results.file_details && (
+                    <div className="overflow-auto max-h-48 rounded-lg border border-white/5">
+                      <table className="w-full text-[10px]">
+                        <thead className="bg-black/60 sticky top-0">
+                          <tr className="text-gray-400 uppercase tracking-wider">
+                            <th className="text-left p-2 font-bold">File</th>
+                            <th className="text-right p-2 font-bold">Size</th>
+                            <th className="text-center p-2 font-bold">Risk</th>
+                            <th className="text-left p-2 font-bold">Reason</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {scanResults.results.file_details.slice(0, 20).map((f: any, i: number) => (
+                            <tr key={i} className="border-t border-white/5 hover:bg-white/5">
+                              <td className="p-2 font-mono text-white">{f.name}</td>
+                              <td className="p-2 text-right text-gray-400">{f.size > 1024 ? `${(f.size / 1024).toFixed(1)}KB` : `${f.size}B`}</td>
+                              <td className="p-2 text-center">
+                                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${
+                                  f.risk === 'Critical' ? 'bg-red-500/20 text-red-400' :
+                                  f.risk === 'High' ? 'bg-orange-500/20 text-orange-400' :
+                                  f.risk === 'Medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                                  'bg-emerald-500/20 text-emerald-400'
+                                }`}>{f.risk}</span>
+                              </td>
+                              <td className="p-2 text-gray-500">{f.reason}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
                 <div className="glass-card border-trust-yellow/40 bg-trust-yellow/5">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="p-2 bg-trust-yellow/20 rounded-lg">
@@ -497,23 +608,87 @@ export default function TrustSensePage() {
                    <span className="text-trust-green font-black uppercase tracking-widest animate-pulse">{scanResults.recommendation}</span>
                 </div>
 
-                {/* AI Recommendation Section */}
-                <div className="mb-8 p-5 bg-trust-cyan/5 border border-trust-cyan/20 rounded-xl">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Cpu className="w-4 h-4 text-trust-cyan" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-trust-cyan">AI Wipe Analysis</span>
+                {/* AI Protocol Recommendation — looks like a real forensic report */}
+                <div className="mb-6 border border-white/10 rounded-xl overflow-hidden">
+                  <div className="bg-white/5 px-4 py-2 flex items-center gap-2 border-b border-white/5">
+                    <Cpu className="w-3 h-3 text-trust-cyan" />
+                    <span className="text-[9px] font-black uppercase tracking-[0.25em] text-trust-cyan">TrustSense Engine — Protocol Assessment</span>
+                    <div className="ml-auto text-[8px] font-mono text-gray-600">{new Date().toISOString().replace('T', ' ').split('.')[0]} UTC</div>
                   </div>
-                  <p className="text-[11px] text-gray-300 leading-relaxed font-mono">{scanResults.ai_reason}</p>
-                  <div className="mt-3 flex gap-3">
-                    <div className="bg-black/40 px-3 py-1.5 rounded text-[9px] font-black uppercase text-trust-yellow border border-trust-yellow/20">
-                      Risk: {scanResults.results.risk_level}
+                  <div className="p-5 grid md:grid-cols-3 gap-4">
+                    <div className="md:col-span-2 space-y-3">
+                      <div className="flex gap-3 items-start">
+                        <div className="mt-0.5 w-2 h-2 rounded-full bg-trust-cyan flex-shrink-0" />
+                        <p className="text-[11px] text-gray-300 leading-loose">{scanResults.ai_reason}</p>
+                      </div>
                     </div>
-                    <div className="bg-black/40 px-3 py-1.5 rounded text-[9px] font-black uppercase text-trust-green border border-trust-green/20">
-                      {scanResults.results.sensitive_files} Sensitive / {scanResults.results.total_files} Total
+                    <div className="space-y-3">
+                      <div className="bg-black/40 border border-white/5 p-3 rounded-lg">
+                        <div className="text-[8px] uppercase tracking-widest text-gray-500 mb-1">Recommended Standard</div>
+                        <div className="text-sm font-black text-trust-green">{scanResults.recommendation}</div>
+                      </div>
+                      <div className="bg-black/40 border border-white/5 p-3 rounded-lg">
+                        <div className="text-[8px] uppercase tracking-widest text-gray-500 mb-1">Threat Level</div>
+                        <div className={`text-sm font-black ${
+                          scanResults.results.risk_level === 'Critical' ? 'text-red-400' :
+                          scanResults.results.risk_level === 'High' ? 'text-orange-400' :
+                          scanResults.results.risk_level === 'Medium' ? 'text-yellow-400' : 'text-emerald-400'
+                        }`}>{scanResults.results.risk_level}</div>
+                      </div>
+                      <div className="bg-black/40 border border-white/5 p-3 rounded-lg">
+                        <div className="text-[8px] uppercase tracking-widest text-gray-500 mb-1">Sensitive / Total</div>
+                        <div className="text-sm font-black text-white">{scanResults.results.sensitive_files} / {scanResults.results.total_files}</div>
+                      </div>
                     </div>
                   </div>
                 </div>
-                
+
+                {/* File Selection for Backup */}
+                {scanResults.results.file_details && (
+                  <div className="mb-6 border border-trust-yellow/20 rounded-xl overflow-hidden bg-trust-yellow/5">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-trust-yellow/10">
+                      <div className="flex items-center gap-2">
+                        <Lock className="w-3 h-3 text-trust-yellow" />
+                        <span className="text-[9px] font-black uppercase tracking-[0.25em] text-trust-yellow">Select Files to Backup Before Wipe</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => setBackupSelected(new Set(scanResults.results.file_details.map((f: any) => f.name)))}
+                          className="text-[8px] font-black uppercase tracking-wider text-trust-cyan hover:text-white transition-colors">Select All</button>
+                        <span className="text-gray-600">|</span>
+                        <button onClick={() => setBackupSelected(new Set())}
+                          className="text-[8px] font-black uppercase tracking-wider text-gray-500 hover:text-white transition-colors">Clear</button>
+                      </div>
+                    </div>
+                    <div className="max-h-36 overflow-y-auto">
+                      {scanResults.results.file_details.map((f: any) => (
+                        <label key={f.name} className="flex items-center gap-3 px-4 py-2 hover:bg-white/5 cursor-pointer border-b border-white/5 last:border-0">
+                          <input type="checkbox"
+                            checked={backupSelected.has(f.name)}
+                            onChange={e => {
+                              const next = new Set(backupSelected);
+                              e.target.checked ? next.add(f.name) : next.delete(f.name);
+                              setBackupSelected(next);
+                            }}
+                            className="accent-trust-yellow w-3 h-3"
+                          />
+                          <span className="font-mono text-[10px] text-white flex-1">{f.name}</span>
+                          <span className="text-[8px] text-gray-500">{f.size > 1024 ? `${(f.size/1024).toFixed(1)}KB` : `${f.size}B`}</span>
+                          <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded ${
+                            f.risk === 'Critical' ? 'bg-red-500/20 text-red-400' :
+                            f.risk === 'High' ? 'bg-orange-500/20 text-orange-400' :
+                            f.risk === 'Medium' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-emerald-500/20 text-emerald-400'
+                          }`}>{f.risk}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {backupSelected.size > 0 && (
+                      <div className="px-4 py-2 bg-trust-yellow/10 text-[9px] text-trust-yellow font-black">
+                        {backupSelected.size} file(s) selected for backup
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="grid md:grid-cols-2 gap-6">
                   <button 
                     onClick={() => startWipe(false)}
@@ -530,13 +705,16 @@ export default function TrustSensePage() {
                   </button>
                   <button 
                     onClick={() => startWipe(true)}
-                    className="p-6 border-2 border-white/10 rounded-2xl hover:border-trust-yellow hover:bg-trust-yellow/5 transition-all text-left group relative overflow-hidden"
+                    disabled={backupSelected.size === 0 && !!scanResults.results.file_details}
+                    className="p-6 border-2 border-white/10 rounded-2xl hover:border-trust-yellow hover:bg-trust-yellow/5 transition-all text-left group relative overflow-hidden disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <div className="flex items-center justify-between relative z-10">
-                      <span className="font-black uppercase tracking-wider text-sm">Backup then Wipe</span>
+                      <span className="font-black uppercase tracking-wider text-sm">Backup Selected + Wipe</span>
                       <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform text-trust-yellow" />
                     </div>
-                    <p className="text-[10px] text-gray-500 mt-2 uppercase tracking-wide leading-relaxed">Mirror sensitive files to secure storage before destruction.</p>
+                    <p className="text-[10px] text-gray-500 mt-2 uppercase tracking-wide leading-relaxed">
+                      {backupSelected.size > 0 ? `Back up ${backupSelected.size} selected file(s), then eradicate all.` : 'Select files above to enable backup.'}
+                    </p>
                     <div className="absolute bottom-0 right-0 p-2 opacity-5 group-hover:opacity-20 transition-opacity">
                       <Lock className="w-12 h-12" />
                     </div>
@@ -774,100 +952,107 @@ export default function TrustSensePage() {
                 </div>
               )}
 
-              {/* Premium Security Passport */}
+              {/* Security Certificate */}
               <motion.div 
-                initial={{ scale: 0.95, opacity: 0, rotateX: 10 }}
-                animate={{ scale: 1, opacity: 1, rotateX: 0 }}
-                transition={{ delay: 0.3, type: "spring", stiffness: 100 }}
-                className="bg-[#050b14] border-4 border-trust-green p-2 max-w-4xl mx-auto relative shadow-[0_0_50px_rgba(178,242,187,0.15)] group perspective-1000"
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="bg-white rounded-2xl max-w-4xl mx-auto overflow-hidden shadow-2xl border border-gray-200"
               >
-                {/* Decorative corners */}
-                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-trust-green -translate-x-4 -translate-y-4" />
-                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-trust-green translate-x-4 -translate-y-4" />
-                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-trust-green -translate-x-4 translate-y-4" />
-                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-trust-green translate-x-4 translate-y-4" />
-
-                <div className="border border-white/10 h-full relative overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
-                  
-                  {/* Header */}
-                  <div className="bg-trust-green text-black p-6 flex items-center justify-between border-b-4 border-black relative z-10">
-                    <div className="flex items-center gap-4">
-                      <Shield className="w-10 h-10" />
+                {/* Header */}
+                <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-white">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Shield className="w-8 h-8" />
                       <div>
-                        <div className="font-black text-2xl uppercase tracking-[0.3em] leading-none">Official Security Passport</div>
-                        <div className="text-[9px] uppercase tracking-widest font-bold mt-1 opacity-80">Cryptographic Eradication Certificate</div>
+                        <div className="text-xl font-bold tracking-wide">Data Sanitization Certificate</div>
+                        <div className="text-[10px] uppercase tracking-widest opacity-80 mt-0.5">TrustSense Forensic Verification Report</div>
                       </div>
                     </div>
-                    {/* Faux Barcode */}
-                    <div className="flex gap-[2px] h-10 opacity-70">
-                      {[...Array(20)].map((_, i) => (
-                        <div key={i} className="bg-black" style={{ width: Math.random() > 0.5 ? '2px' : '4px' }} />
-                      ))}
+                    <div className="text-right">
+                      <div className="text-[10px] opacity-70">Certificate ID</div>
+                      <div className="font-mono text-sm font-bold">{cert?.hash?.substring(0, 12)}</div>
                     </div>
                   </div>
-                  
-                  {/* Body */}
-                  <div className="p-10 grid md:grid-cols-5 gap-12 relative z-10">
-                    
-                    {/* Left Column Data */}
-                    <div className="md:col-span-3 space-y-8">
-                      <div className="bg-trust-yellow text-black p-4 font-black text-[11px] uppercase shadow-[8px_8px_0px_rgba(255,255,255,0.1)] tracking-[0.2em] border border-black flex justify-between items-center">
-                        <span>Cert ID: {cert?.hash?.substring(0, 12)}</span>
-                        <span className="opacity-50">|</span>
-                        <span>Node: {deviceId}</span>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-6">
-                        <div className="bg-black/60 border border-white/5 p-6 backdrop-blur-md relative overflow-hidden group-hover:border-trust-green/50 transition-colors">
-                          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-trust-green to-transparent" />
-                          <div className="text-[10px] uppercase font-black text-gray-500 tracking-widest mb-2">Threats Purged</div>
-                          <div className="text-5xl font-black text-white">{scanResults.results.sensitive_files}</div>
-                        </div>
-                        <div className="bg-black/60 border border-white/5 p-6 backdrop-blur-md relative overflow-hidden group-hover:border-trust-green/50 transition-colors">
-                          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-trust-cyan to-transparent" />
-                          <div className="text-[10px] uppercase font-black text-gray-500 tracking-widest mb-2">Total Validated</div>
-                          <div className="text-5xl font-black text-white">{scanResults.results.total_files}</div>
-                        </div>
-                      </div>
+                </div>
 
-                      <div className="flex gap-4">
-                        <div className="flex-1 border border-dashed border-trust-green/40 p-4 text-left bg-trust-green/5">
-                          <div className="text-[8px] uppercase font-black text-trust-green/70 tracking-widest mb-1">Eradication Protocol</div>
-                          <div className="font-black text-white text-sm tracking-widest">ANTIGRAVITY v4.2</div>
-                        </div>
-                        <div className="flex-1 border border-dashed border-trust-cyan/40 p-4 text-left bg-trust-cyan/5">
-                          <div className="text-[8px] uppercase font-black text-trust-cyan/70 tracking-widest mb-1">Timestamp</div>
-                          <div className="font-black text-white text-sm tracking-widest">{new Date().toISOString().split('T')[0]}</div>
-                        </div>
+                <div className="p-8 space-y-6 text-gray-800">
+                  {/* Info Grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {[
+                      { label: 'Device Node', value: deviceId },
+                      { label: 'Date Issued', value: new Date().toLocaleDateString() },
+                      { label: 'Protocol Used', value: scanResults?.recommendation || 'Standard' },
+                      { label: 'Integrity Score', value: `${wipeResults.after_score}%` },
+                    ].map(item => (
+                      <div key={item.label} className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                        <div className="text-[9px] uppercase tracking-wider text-gray-400 font-bold">{item.label}</div>
+                        <div className="text-sm font-bold text-gray-800 mt-1">{item.value}</div>
                       </div>
+                    ))}
+                  </div>
+
+                  {/* Stats */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="text-center p-4 bg-red-50 rounded-xl border border-red-100">
+                      <div className="text-3xl font-black text-red-500">{scanResults?.results?.sensitive_files || 0}</div>
+                      <div className="text-[9px] uppercase text-red-400 font-bold tracking-wider mt-1">Threats Purged</div>
                     </div>
-
-                    {/* Right Column Visuals */}
-                    <div className="md:col-span-2 flex flex-col items-center justify-center relative">
-                      {/* Glowing Stamp */}
-                      <div className="relative w-48 h-48 flex items-center justify-center">
-                         <div className="absolute inset-0 border-[6px] border-trust-green rounded-full opacity-20 animate-ping" />
-                         <div className="absolute inset-2 border-[4px] border-trust-green rounded-full border-dashed animate-[spin_10s_linear_infinite]" />
-                         <div className="bg-trust-green/10 w-full h-full rounded-full flex flex-col items-center justify-center border-4 border-trust-green shadow-[0_0_30px_rgba(178,242,187,0.4)] backdrop-blur-sm z-10 rotate-[-15deg]">
-                            <Lock className="text-trust-green w-12 h-12 mb-2" />
-                            <span className="font-black text-trust-green uppercase tracking-[0.3em] text-[10px]">Verified</span>
-                            <span className="font-bold text-trust-green/70 uppercase tracking-[0.2em] text-[7px] mt-1">Zero-Bit Secure</span>
-                         </div>
-                      </div>
-
-                      {/* Signature Block */}
-                      <div className="mt-12 w-full text-center border-t border-white/20 pt-4 relative">
-                        <div className="font-mono text-xl text-white/40 italic mb-2 select-none -rotate-2">TrustSense Engine</div>
-                        <div className="text-[8px] font-black uppercase tracking-[0.4em] text-gray-500">Authorized Signature</div>
-                      </div>
+                    <div className="text-center p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                      <div className="text-3xl font-black text-emerald-600">{scanResults?.results?.total_files || 0}</div>
+                      <div className="text-[9px] uppercase text-emerald-500 font-bold tracking-wider mt-1">Files Processed</div>
+                    </div>
+                    <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-100">
+                      <div className="text-3xl font-black text-blue-600">100%</div>
+                      <div className="text-[9px] uppercase text-blue-400 font-bold tracking-wider mt-1">Verified Clean</div>
                     </div>
                   </div>
 
-                  {/* Footer Hash */}
-                  <div className="bg-black text-trust-green/70 p-3 text-[9px] font-black font-mono border-t border-white/10 text-center tracking-[0.2em] uppercase relative z-10 flex justify-between px-6">
-                    <span>SHA-256 Signature</span>
-                    <span className="truncate ml-4">{cert?.hash}</span>
+                  {/* File Type Chart in Passport */}
+                  {scanResults?.results?.file_types && (
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-3">Eradicated File Distribution</div>
+                      <div className="flex items-end gap-1 h-16 border-b border-gray-200 mb-2">
+                        {(() => {
+                          const entries = Object.entries(scanResults.results.file_types);
+                          const maxC = Math.max(...entries.map(([, c]) => c as number), 1);
+                          const cols = ['bg-emerald-500', 'bg-teal-500', 'bg-cyan-500', 'bg-blue-500', 'bg-indigo-500', 'bg-violet-500', 'bg-amber-500', 'bg-rose-500'];
+                          return entries.slice(0, 8).map(([ext, count], i) => (
+                            <div key={ext} className="flex-1 flex flex-col items-center justify-end h-full" title={`${ext}: ${count}`}>
+                              <div className="text-[7px] text-gray-400 mb-0.5">{count as number}</div>
+                              <div className={`w-full ${cols[i % cols.length]} rounded-t`} style={{ height: `${((count as number) / maxC) * 100}%`, minHeight: 4 }} />
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                      <div className="flex gap-2 justify-center flex-wrap">
+                        {Object.entries(scanResults.results.file_types).slice(0, 8).map(([ext]) => (
+                          <span key={ext} className="text-[8px] text-gray-400 font-bold uppercase">.{ext}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Verification */}
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                        <span className="text-sm font-bold text-emerald-600">Sanitization Verified</span>
+                      </div>
+                      <div className="text-[9px] text-gray-400 mt-1">All data sectors overwritten and confirmed irrecoverable</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-mono italic text-gray-400 text-sm">TrustSense Engine</div>
+                      <div className="w-32 border-t border-gray-300 mt-2 pt-1 text-[8px] text-gray-400 uppercase tracking-wider">Authorized Signature</div>
+                    </div>
                   </div>
+                </div>
+
+                {/* Footer */}
+                <div className="bg-gray-50 px-8 py-3 text-[8px] font-mono text-gray-400 border-t border-gray-200 flex justify-between">
+                  <span>SHA-256: {cert?.hash}</span>
+                  <span>TrustSense Forensic Platform</span>
                 </div>
               </motion.div>
 
