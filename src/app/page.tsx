@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Shield, 
@@ -8,19 +8,12 @@ import {
   Cpu, 
   Trash2, 
   Download, 
-  Lock, 
   AlertTriangle,
   CheckCircle2,
   Database,
-  ArrowRight,
   ShieldCheck,
-  FileSearch,
   Activity,
-  Archive,
-  BarChart3,
   RefreshCw,
-  FolderOpen,
-  FileCode,
   Zap,
   Target
 } from "lucide-react";
@@ -77,7 +70,7 @@ export default function TrustSensePage() {
   const [selectedPaths, setSelectedPaths] = useState<string[]>([]);
   const [wipeResults, setWipeResults] = useState<WipeResults | null>(null);
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
-  const [activeDirHandle, setActiveDirHandle] = useState<FileSystemDirectoryHandle | null>(null);
+  const [activeDirHandle, setActiveDirHandle] = useState<any>(null);
 
   const [consoleLogs, setConsoleLogs] = useState<string[]>(["[SYSTEM] TrustSense Mesh Node Active.", "[SYSTEM] Awaiting forensic target..."]);
 
@@ -202,6 +195,8 @@ export default function TrustSensePage() {
       });
       setWorkflowStage(4);
       addLog("Eradication verified. Passport generated.");
+    } catch (e) {
+      addLog("Certification failed. Check API connectivity.");
     } finally {
       setIsWiping(false);
     }
@@ -321,7 +316,7 @@ export default function TrustSensePage() {
                 <div className="bg-[#06b6d4]/5 p-8 rounded-[32px] border border-[#06b6d4]/20 flex flex-col justify-between">
                   <div>
                     <h3 className="text-sm font-black uppercase tracking-wider mb-4 flex items-center gap-2">
-                      <Zap className="w-4 h-4 text-[#06b6d4]" /> AI Protocol Recommendation
+                      <Zap className="w-4 h-4 text-[#06b6d4]" /> AI Recommendation
                     </h3>
                     <p className="text-xs text-[#94a3b8] leading-relaxed italic border-l-2 border-[#06b6d4] pl-4 py-1 mb-6">
                       "{scanResults.ai_reason}"
@@ -383,7 +378,7 @@ export default function TrustSensePage() {
             <motion.section initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="space-y-6">
               <div className="bg-[#0f172a] p-10 rounded-[40px] border border-orange-500/30 text-center">
                 <h3 className="text-xl font-black uppercase tracking-[0.5em] text-orange-500 mb-8"> <RefreshCw className="w-6 h-6 animate-spin inline mr-2" /> Sanitizing Sectors</h3>
-                <div className="text-5xl font-black text-white mb-6">{progress}%</div>
+                <div className="text-5xl font-black text-white mb-6 tabular-nums">{progress}%</div>
                 <div className="h-4 w-full bg-white/5 rounded-full p-1 border border-white/10 mb-4">
                   <motion.div initial={{ width: 0 }} animate={{ width: `${progress}%` }} className="h-full bg-gradient-to-r from-orange-500 to-red-600 rounded-full" />
                 </div>
@@ -403,7 +398,7 @@ export default function TrustSensePage() {
                 </div>
 
                 <div className="bg-white/5 p-10 rounded-[40px] border border-white/10">
-                  <h3 className="text-xs font-black uppercase tracking-widest text-[#94a3b8] mb-4">Attack Simulation Verdict</h3>
+                  <h3 className="text-xs font-black uppercase tracking-widest text-[#94a3b8] mb-4 flex items-center gap-2"> <Activity className="w-4 h-4" /> Attack Verdict</h3>
                   <div className="space-y-2">
                     {wipeResults.attack.logs.map((log, i) => <div key={i} className="text-[11px] font-mono text-[#06b6d4]">✓ {log}</div>)}
                   </div>
@@ -433,7 +428,7 @@ export default function TrustSensePage() {
                     ].map(field => (
                       <div key={field.label} className="border-b border-[#0a192f]/10 pb-2">
                         <div className="text-[10px] font-black uppercase text-[#64748b]">{field.label}</div>
-                        <div className="text-lg font-black text-[#0a192f]">{field.value}</div>
+                        <div className={cn("text-lg font-black", field.label === "Trust Score" ? "text-emerald-700" : "text-[#0a192f]")}>{field.value}</div>
                       </div>
                     ))}
                   </div>
@@ -444,12 +439,12 @@ export default function TrustSensePage() {
                   </div>
 
                   <div className="flex items-center gap-10">
-                    <div className="flex-1 font-mono text-[9px] text-[#64748b]">
+                    <div className="flex-1 font-mono text-[9px] text-[#64748b] leading-relaxed">
                       P&lt;TSA{deviceId.replace(/-/g,'').padEnd(20,'<')}&lt;&lt;&lt;&lt;&lt;<br/>
-                      {wipeResults.audit_hash.slice(0,20).toUpperCase()}
+                      {wipeResults.audit_hash.slice(0,20).toUpperCase()}&lt;&lt;&lt;260516
                     </div>
-                    <button onClick={downloadPassport} className="bg-[#0a192f] text-[#c5a059] px-10 py-5 rounded-2xl font-black uppercase tracking-widest">
-                      <Download className="w-6 h-6 inline mr-2" /> Download Passport
+                    <button onClick={downloadPassport} className="bg-[#0a192f] text-[#c5a059] px-10 py-5 rounded-2xl font-black uppercase tracking-widest flex items-center gap-2">
+                      <Download className="w-5 h-5" /> Download Passport
                     </button>
                   </div>
                 </div>
