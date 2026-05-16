@@ -286,6 +286,23 @@ def generate_neo_pdf(data):
 
     valid_block = [
         [Paragraph("VALID FROM", s_valid_lbl)],
+        [Paragraph(date, s_valid_val)],
+    ]
+    valid_tbl = Table(valid_block, colWidths=[W*0.35])
+    valid_tbl.setStyle(TableStyle([('ALIGN', (0,0),(-1,-1), 'RIGHT'), ('RIGHTPADDING', (0,0), (-1,-1), 15)]))
+
+    sig_row = Table([[sig_tbl, valid_tbl]], colWidths=[W*0.65, W*0.35])
+    sig_row.setStyle(TableStyle([
+        ('BACKGROUND', (0,0),(-1,-1), PARCHMENT),
+        ('VALIGN', (0,0),(-1,-1), 'BOTTOM'),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 12)
+    ]))
+    elements.append(sig_row)
+
+    # ── MRZ (MACHINE READABLE ZONE) ──────────────────────────────────────────
+    mrz_raw1 = f"P<TSA{device_id.replace('-',''):<30}{'<'*15}"[:44]
+    mrz_raw2 = f"{sha_hash.upper()[:9]}{'<'*9}260516{'<'*15}"[:44]
+    
     mrz1 = mrz_raw1.replace('<', '&lt;')
     mrz2 = mrz_raw2.replace('<', '&lt;')
     mrz_tbl = Table([
@@ -299,8 +316,6 @@ def generate_neo_pdf(data):
         ('LEFTPADDING',(0,0),(-1,-1),12),('RIGHTPADDING',(0,0),(-1,-1),12),
     ]))
     elements.append(mrz_tbl)
-
-    # ── GOLD BOTTOM STRIP ─────────────────────────────────────────────────────
     elements.append(gold_strip)
 
     # ── PAGE BACKGROUND ───────────────────────────────────────────────────────
