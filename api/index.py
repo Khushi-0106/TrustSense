@@ -26,6 +26,10 @@ def generate_neo_pdf(data):
         from reportlab.lib.styles import ParagraphStyle
         from reportlab.lib.units import inch
 
+        # Helper for transparent colors
+        def get_alpha_col(c, a):
+            return colors.Color(c.red, c.green, c.blue, alpha=a)
+
         # Data Extraction
         device_id    = data.get('device_id', 'TS-UNIT-01')
         sha_hash     = data.get('hash', 'UNKNOWN')
@@ -92,7 +96,7 @@ def generate_neo_pdf(data):
         c_labels = [Paragraph(l, s_field_lbl) for l in ["HOLDER / NODE", "DATE OF ISSUE", "PROTOCOL APPLIED", "INTEGRITY RATING"]]
         c_vals   = [Paragraph(device_id, s_field_val), Paragraph(date, s_field_val), Paragraph(protocol, s_field_val), Paragraph(f"{trust_score}%", s_field_val)]
         c_tbl = Table([c_labels, c_vals], colWidths=[cw]*4)
-        c_tbl.setStyle(TableStyle([('BACKGROUND', (0,0),(-1,-1), PARCHMENT), ('LINEBELOW', (0,1), (-1,1), 1.5, colors.rgba(NAVY.red, NAVY.green, NAVY.blue, 0.2)), ('TOPPADDING', (0,0),(-1,-1), 4), ('BOTTOMPADDING', (0,0),(-1,-1), 12), ('LEFTPADDING', (0,0),(-1,-1), 15)]))
+        c_tbl.setStyle(TableStyle([('BACKGROUND', (0,0),(-1,-1), PARCHMENT), ('LINEBELOW', (0,1), (-1,1), 1.5, get_alpha_col(NAVY, 0.2)), ('TOPPADDING', (0,0),(-1,-1), 4), ('BOTTOMPADDING', (0,0),(-1,-1), 12), ('LEFTPADDING', (0,0),(-1,-1), 15)]))
         elements.append(c_tbl)
         elements.append(space(20))
 
@@ -104,8 +108,8 @@ def generate_neo_pdf(data):
             return t
         
         stat_row = Table([[mk_stat(files_sens, "THREATS PURGED", RED_LIGHT, colors.HexColor("#fecaca"), s_stat_num_r),
-                           mk_stat(files_total, "FILES CLEARED", colors.rgba(NAVY.red, NAVY.green, NAVY.blue, 0.05), colors.rgba(NAVY.red, NAVY.green, NAVY.blue, 0.1), s_stat_num_n),
-                           mk_stat("100%", "VERIFIED CLEAN", colors.rgba(GOLD.red, GOLD.green, GOLD.blue, 0.1), colors.rgba(GOLD.red, GOLD.green, GOLD.blue, 0.3), s_stat_num_g)]], colWidths=[sw+10]*3)
+                           mk_stat(files_total, "FILES CLEARED", get_alpha_col(NAVY, 0.05), get_alpha_col(NAVY, 0.1), s_stat_num_n),
+                           mk_stat("100%", "VERIFIED CLEAN", get_alpha_col(GOLD, 0.1), get_alpha_col(GOLD, 0.3), s_stat_num_g)]], colWidths=[sw+10]*3)
         stat_row.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,-1),PARCHMENT),('ALIGN',(0,0),(-1,-1),'CENTER')]))
         elements.append(stat_row)
         elements.append(space(20))
@@ -124,15 +128,15 @@ def generate_neo_pdf(data):
                 bc.setStyle(TableStyle([('ALIGN', (0,0),(-1,-1), 'CENTER'), ('VALIGN', (0,1), (0,1), 'BOTTOM')]))
                 bar_cells.append(bc)
             chart_tbl = Table([bar_cells], colWidths=[bar_w]*len(entries))
-            chart_tbl.setStyle(TableStyle([('BACKGROUND', (0,0),(-1,-1), PARCHMENT), ('ALIGN', (0,0),(-1,-1), 'CENTER'), ('VALIGN', (0,0),(-1,-1), 'BOTTOM'), ('LINEBELOW', (0,0), (-1,0), 0.5, colors.rgba(NAVY.red, NAVY.green, NAVY.blue, 0.1)), ('BOTTOMPADDING', (0,0), (-1,-1), 10)]))
+            chart_tbl.setStyle(TableStyle([('BACKGROUND', (0,0),(-1,-1), PARCHMENT), ('ALIGN', (0,0),(-1,-1), 'CENTER'), ('VALIGN', (0,0),(-1,-1), 'BOTTOM'), ('LINEBELOW', (0,0), (-1,0), 0.5, get_alpha_col(NAVY, 0.1)), ('BOTTOMPADDING', (0,0), (-1,-1), 10)]))
             elements.append(chart_tbl)
             elements.append(space(20))
 
         # Verification
-        v_data = [[Table([[Paragraph("✓  Sanitization Verified", sty('VF', fontName='Helvetica-Bold', fontSize=11, textColor=GREEN))], [Paragraph("All sectors overwritten — confirmed irrecoverable", sty('VS', fontName='Helvetica', fontSize=7, textColor=GRAY))]], colWidths=[W*0.7], style=[('LEFTPADDING',(0,0),(-1,-1),15)]),
-                   Table([[Paragraph("VERIFIED<br/>SECURE", sty('SEAL', fontName='Helvetica-Bold', fontSize=5, textColor=NAVY, alignment=1))]], colWidths=[0.8*inch], rowHeights=[0.8*inch], style=[('BACKGROUND', (0,0),(-1,-1), PARCHMENT), ('BOX', (0,0),(-1,-1), 1, colors.rgba(NAVY.red, NAVY.green, NAVY.blue, 0.2)), ('ROUNDEDCORNERS', (0,0),(-1,-1), 30), ('ALIGN', (0,0),(-1,-1), 'CENTER'), ('VALIGN', (0,0),(-1,-1), 'MIDDLE'))]]
+        v_data = [[Table([[Paragraph("✓  Sanitization Verified", sty('VF', fontName='Helvetica-Bold', fontSize=11, textColor=GREEN))], [Paragraph("All sectors overwritten — confirmed irrecoverable", sty('VS', fontName='Helvetica', fontSize=7, textColor=GRAY))]], colWidths=[W*0.7], style=[('LEFTPADDING',(0,0),(-1,-1),15),('TOPPADDING',(0,0),(-1,-1),0)]),
+                   Table([[Paragraph("VERIFIED<br/>SECURE", sty('SEAL', fontName='Helvetica-Bold', fontSize=5, textColor=NAVY, alignment=1))]], colWidths=[0.8*inch], rowHeights=[0.8*inch], style=[('BACKGROUND', (0,0),(-1,-1), PARCHMENT), ('BOX', (0,0),(-1,-1), 1, get_alpha_col(NAVY, 0.2)), ('ROUNDEDCORNERS', (0,0),(-1,-1), 30), ('ALIGN', (0,0),(-1,-1), 'CENTER'), ('VALIGN', (0,0),(-1,-1), 'MIDDLE')])]]
         v_row = Table(v_data, colWidths=[W*0.75, W*0.25])
-        v_row.setStyle(TableStyle([('BACKGROUND', (0,0),(-1,-1), PARCHMENT), ('VALIGN', (0,0),(-1,-1), 'MIDDLE'), ('LINEABOVE', (0,0), (-1,-1), 1, colors.rgba(NAVY.red, NAVY.green, NAVY.blue, 0.1))]))
+        v_row.setStyle(TableStyle([('BACKGROUND', (0,0),(-1,-1), PARCHMENT), ('VALIGN', (0,0),(-1,-1), 'MIDDLE'), ('LINEABOVE', (0,0), (-1,-1), 1, get_alpha_col(NAVY, 0.1))]))
         elements.append(v_row)
         elements.append(space(15))
 
@@ -146,7 +150,7 @@ def generate_neo_pdf(data):
         # MRZ
         m1 = f"P<TSA{device_id.replace('-',''):<30}{'<'*15}"[:44].replace('<', '&lt;')
         m2 = f"{sha_hash.upper()[:9]}{'<'*9}260516{'<'*15}"[:44].replace('<', '&lt;')
-        mrz_tbl = Table([[Paragraph(m1, s_mrz)], [Paragraph(m2, s_mrz)]], colWidths=[W], style=[('BACKGROUND', (0,0),(-1,-1), colors.rgba(NAVY.red, NAVY.green, NAVY.blue, 0.04)), ('LINEABOVE', (0,0), (-1,0), 0.5, colors.rgba(NAVY.red, NAVY.green, NAVY.blue, 0.1)), ('TOPPADDING', (0,0), (-1,-1), 6), ('BOTTOMPADDING', (0,0), (-1,-1), 6), ('LEFTPADDING', (0,0), (-1,-1), 15)])
+        mrz_tbl = Table([[Paragraph(m1, s_mrz)], [Paragraph(m2, s_mrz)]], colWidths=[W], style=[('BACKGROUND', (0,0),(-1,-1), get_alpha_col(NAVY, 0.04)), ('LINEABOVE', (0,0), (-1,0), 0.5, get_alpha_col(NAVY, 0.1)), ('TOPPADDING', (0,0), (-1,-1), 6), ('BOTTOMPADDING', (0,0), (-1,-1), 6), ('LEFTPADDING', (0,0), (-1,-1), 15)])
         elements.append(mrz_tbl)
         elements.append(gold_strip)
 
