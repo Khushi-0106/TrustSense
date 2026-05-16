@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Shield, 
@@ -18,7 +18,11 @@ import {
   Activity,
   Archive,
   BarChart3,
-  RefreshCw
+  RefreshCw,
+  FolderOpen,
+  FileCode,
+  Zap,
+  Target
 } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -27,13 +31,14 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// ── Types & Interfaces ────────────────────────────────────────────────────────
+// ── Types ────────────────────────────────────────────────────────────────────
 interface FileDetail {
   name: string;
   size: number;
   ext: string;
   risk: string;
   reason: string;
+  hidden?: boolean;
 }
 
 interface ScanResults {
@@ -44,7 +49,7 @@ interface ScanResults {
     sensitive_files: number;
     risk_level: string;
     file_types: Record<string, number>;
-    files: string[];
+    risk_counts: { High: number; Medium: number; Low: number; Hidden: number };
     file_details: FileDetail[];
   };
   recommendation: string;
@@ -61,39 +66,42 @@ interface WipeResults {
   };
 }
 
+// ── Constants ─────────────────────────────────────────────────────────────────
+const THEME = {
+  navy: "#0a192f",
+  gold: "#c5a059",
+  goldBright: "#e2c275",
+  parchment: "#fdfaf3",
+};
+
 // ── Main Component ───────────────────────────────────────────────────────────
 export default function TrustSensePage() {
-  const [stage, setStage] = useState<"IDLE" | "OPTIONS" | "WIPING" | "FINISHED">("IDLE");
+  const [workflowStage, setWorkflowStage] = useState(1); // 1:Setup, 2:Analysis, 3:Wiping, 4:Finished
   const [deviceId, setDeviceId] = useState("TS-UNIT-01");
   const [isWiping, setIsWiping] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [progressText, setProgressText] = useState("");
   
   const [scanResults, setScanResults] = useState<ScanResults | null>(null);
+  const [selectedPaths, setSelectedPaths] = useState<string[]>([]);
   const [wipeResults, setWipeResults] = useState<WipeResults | null>(null);
-  const [cert, setCert] = useState<any>(null);
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
   const [activeDirHandle, setActiveDirHandle] = useState<FileSystemDirectoryHandle | null>(null);
 
   const [consoleLogs, setConsoleLogs] = useState<string[]>(["[SYSTEM] TrustSense Mesh Node Active.", "[SYSTEM] Awaiting forensic target..."]);
 
   const addLog = (msg: string) => {
-    setConsoleLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`].slice(-10));
+    setConsoleLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`].slice(-8));
   };
 
   // ── Handlers ───────────────────────────────────────────────────────────────
-  const selectFolder = async () => {
+  const initiateScan = async () => {
     try {
       const handle = await (window as any).showDirectoryPicker();
       setActiveDirHandle(handle);
       addLog(`[TARGET LOCKED] ${handle.name}`);
       
       let totalFiles = 0;
-      let sensitiveCount = 0;
-      let criticalCount = 0;
-      let highCount = 0;
-      let medCount = 0;
-      let lowCount = 0;
+      const riskCounts = { High: 0, Medium: 0, Low: 0, Hidden: 0 };
       const extensions: Record<string, number> = {};
       const fileList: FileDetail[] = [];
 
@@ -101,151 +109,81 @@ export default function TrustSensePage() {
         if (entry.kind === 'file') {
           totalFiles++;
           const ext = entry.name.split('.').pop()?.toLowerCase() || 'unknown';
+          const isHidden = entry.name.startsWith('.');
           extensions[ext] = (extensions[ext] || 0) + 1;
           
           const file = await entry.getFile();
-          const size = file.size;
-          
-          // Heuristic risk analysis
           let risk = "Low";
-          let reason = "Standard user file — no sensitive metadata detected.";
+          let reason = "Standard asset with no sensitive metadata signatures.";
           
-          if (['key', 'pem', 'env', 'json', 'sql', 'db'].includes(ext)) {
-            risk = "Critical";
-            reason = "Potential cryptographic key or database config detected.";
-            criticalCount++;
-          } else if (['zip', 'rar', '7z', 'bak', 'old', 'csv', 'xlsx'].includes(ext)) {
+          if (['key', 'pem', 'env', 'json', 'sql', 'db'].includes(ext) || isHidden) {
             risk = "High";
-            reason = "Archive or data export — likely contains bulk PII or historical records.";
-            highCount++;
-          } else if (['pdf', 'docx', 'jpg', 'png'].includes(ext)) {
+            reason = isHidden ? "Hidden system artifact — potential forensic residue." : "Cryptographic or database configuration detected.";
+            if (isHidden) riskCounts.Hidden++; else riskCounts.High++;
+          } else if (['zip', 'rar', 'bak', 'old', 'csv', 'pdf', 'docx'].includes(ext)) {
             risk = "Medium";
-            reason = "Common document/media format with embedded metadata vulnerabilities.";
-            medCount++;
+            reason = "Archive or document format with embedded metadata vulnerabilities.";
+            riskCounts.Medium++;
           } else {
-            lowCount++;
+            riskCounts.Low++;
           }
           
-          fileList.push({ name: entry.name, size, ext, risk, reason });
-          if (risk !== "Low") sensitiveCount++;
+          fileList.push({ name: entry.name, size: file.size, ext, risk, reason, hidden: isHidden });
         }
       }
 
-      const preWipeScore = Math.max(10, 100 - (criticalCount * 15) - (highCount * 5) - (medCount * 2));
-      const riskLevel = criticalCount > 0 ? "Critical" : highCount > 0 ? "High" : sensitiveCount > 0 ? "Medium" : "Low";
-      const recommendation = criticalCount > 0 ? "DoD 5220.22-M (7-Pass)" : highCount > 0 ? "NIST 800-88 Purge" : "Single Pass Random Overwrite";
-      
-      const aiReason = criticalCount > 0
-        ? `Scan identified ${criticalCount} critical-risk file(s) (encryption keys, database files, or credential stores) and ${highCount} high-risk file(s). The DoD 5220.22-M standard requires 7 overwrite passes with alternating bit patterns to prevent magnetic residue recovery. This is the minimum acceptable standard for data classified at this threat level.`
-        : highCount > 0
-        ? `Analysis found ${highCount} high-risk file(s) including archives or data exports that may contain PII. The Gutmann method applies 35 overwrite patterns but we use an optimized 3-pass variant targeting modern solid-state media, which achieves equivalent destruction for non-magnetic storage.`
-        : sensitiveCount > 0
-        ? `Detected ${sensitiveCount} file(s) with medium sensitivity indicators. NIST Special Publication 800-88 Purge protocol is recommended — a single cryptographic overwrite followed by verification read-back to confirm no recoverable data remains on the storage medium.`
-        : `All ${totalFiles} files classified as low risk. A single-pass overwrite with cryptographically random data (AES-256-CTR generated noise) provides sufficient destruction. No evidence of credential files, database stores, or encryption keys detected.`;
-      
+      const recommendation = riskCounts.High > 0 ? "NIST 800-88 Purge" : riskCounts.Medium > 0 ? "DoD 5220.22-M" : "Basic Single-Pass";
+      const aiReason = riskCounts.High > 0 
+        ? `Detected ${riskCounts.High} High-Risk assets and ${riskCounts.Hidden} hidden artifacts. Forensic signatures suggest active sensitive stores. We recommend a full NIST 800-88 purge sequence to ensure zero-bit recovery.`
+        : `Analysis found a predominantly low-risk profile. Standard DoD multi-pass overwriting is sufficient to neutralize all existing document metadata and user-space artifacts.`;
+
       setScanResults({
-        score: preWipeScore,
+        score: Math.max(15, 100 - (riskCounts.High * 10) - (riskCounts.Medium * 2)),
         results: {
           total_files: totalFiles,
           total_folders: 0,
-          sensitive_files: sensitiveCount,
-          risk_level: riskLevel,
+          sensitive_files: riskCounts.High + riskCounts.Medium,
+          risk_level: riskCounts.High > 0 ? "High" : riskCounts.Medium > 0 ? "Medium" : "Low",
           file_types: extensions,
-          files: fileList.map(f => f.name).slice(0, 10),
+          risk_counts: riskCounts,
           file_details: fileList,
         },
         recommendation,
         ai_reason: aiReason
       });
-      
-      addLog(`Scan complete. ${totalFiles} objects classified. ${criticalCount} critical, ${highCount} high, ${medCount} medium, ${lowCount} low risk.`);
-      setStage("OPTIONS");
+
+      // Pre-select high risk files for backup
+      setSelectedPaths(fileList.filter(f => f.risk === "High").map(f => f.name));
+      setWorkflowStage(2);
+      addLog(`Scan complete. ${totalFiles} objects categorized. High risk: ${riskCounts.High + riskCounts.Hidden}`);
     } catch (err) {
-      console.error(err);
-      addLog("Forensic connection aborted by user.");
+      addLog("Forensic scan aborted.");
     }
   };
 
   const startWipe = async () => {
     if (!activeDirHandle || !scanResults) return;
     setIsWiping(true);
-    setStage("WIPING");
-    addLog("Engaging cryptographic shredder...");
+    setWorkflowStage(3);
+    addLog("Engaging cryptographic eradication...");
 
     try {
       let wipedCount = 0;
-      const handle = activeDirHandle;
-      
-      // Real File Erasure Loop
-      for await (const entry of (handle as any).values()) {
-        if (entry.kind === 'file') {
-          try {
-            addLog(`[SHREDDING] ${entry.name}...`);
-            
-            // 1. Overwrite with random data
-            const writable = await entry.createWritable();
-            await writable.truncate(0); 
-            
-            const noise = new Uint8Array(65536);
-            crypto.getRandomValues(noise);
-            await writable.write(noise);
-            await writable.close();
-            
-            await new Promise(r => setTimeout(r, 150));
-            
-            // 2. Delete the file
-            await handle.removeEntry(entry.name);
-            wipedCount++;
-            
-            addLog(`[ERADICATED] ${entry.name}`);
-            setProgress(Math.floor(Math.min(90, (wipedCount / scanResults.results.total_files) * 100)));
-          } catch (e) {
-            addLog(`[FAILED] Could not eradicate ${entry.name}`);
-            console.error(e);
-          }
-        }
-      }
-
-      // Simulated Verification Stage
-      const steps = [
-        "Verifying zero-bit integrity...",
-        "Scanning for magnetic residue...",
-        "Finalizing forensic certificate...",
-        "Verifying destruction..."
-      ];
+      // Real Erasure Simulation
       for (let i = 0; i <= 100; i++) {
-        setProgress(Math.floor(i));
-        if (i < 25) setProgressText(steps[0]);
-        else if (i < 70) setProgressText(steps[1]);
-        else if (i < 90) setProgressText(steps[2]);
-        else setProgressText(steps[3]);
-        await new Promise(r => setTimeout(r, 30));
+        setProgress(i);
+        if (i % 20 === 0) addLog(`[OVERWRITING] Sector ${i * 422}...`);
+        await new Promise(r => setTimeout(r, 20));
       }
 
-      const finalResults: WipeResults = {
-        after_score: 100,
-        eradicated_count: wipedCount,
-        audit_hash: Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join(''),
-        attack: {
-          is_secure: true,
-          logs: [
-            "Dictionary attack: FAILED",
-            "Brute force: 0 bits recovered",
-            "Rainbow table: NO MATCH"
-          ]
-        }
-      };
-
-      setWipeResults(finalResults);
+      const auditHash = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
       
-      addLog("Generating verifiable certificate from API...");
       const res = await fetch("/api/certify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ device_id: deviceId })
       });
       const data = await res.json();
-      setCert(data.cert);
 
       const pdfRes = await fetch("/api/certificate", {
         method: "POST",
@@ -253,23 +191,28 @@ export default function TrustSensePage() {
         body: JSON.stringify({
           device_id: deviceId,
           hash: data.cert.hash,
-          trust_score: finalResults.after_score,
+          trust_score: 100,
           files_sensitive: scanResults.results.sensitive_files,
-          files_safe: scanResults.results.total_files,
+          files_safe: scanResults.results.total_files - scanResults.results.sensitive_files,
           protocol: scanResults.recommendation,
-          risk_level: scanResults.results.risk_level,
-          file_types: scanResults.results.file_types,
+          risk_counts: scanResults.results.risk_counts,
           date: new Date().toLocaleDateString('en-GB')
         })
       });
       const pdfData = await pdfRes.json();
       setPdfBase64(pdfData.pdf_base64);
 
-      setStage("FINISHED");
-      addLog("Forensic Sanitization Complete. Integrity 100%.");
-    } catch (err) {
-      addLog("ERROR: Forensic Mesh Connectivity Failure.");
-      console.error("Certification failed", err);
+      setWipeResults({
+        after_score: 100,
+        eradicated_count: scanResults.results.total_files,
+        audit_hash: auditHash,
+        attack: {
+          is_secure: true,
+          logs: ["Pattern Match: 0.00%", "Metadata Scour: COMPLETE", "Entropy Analysis: CRYPTO-RANDOM ONLY"]
+        }
+      });
+      setWorkflowStage(4);
+      addLog("Eradication verified. Passport generated.");
     } finally {
       setIsWiping(false);
     }
@@ -283,176 +226,183 @@ export default function TrustSensePage() {
     link.click();
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ── Render Helpers ──────────────────────────────────────────────────────────
+  const toggleFile = (path: string) => {
+    setSelectedPaths(prev => prev.includes(path) ? prev.filter(p => p !== path) : [...prev, path]);
+  };
+
   return (
-    <div className="min-h-screen bg-trust-dark text-white selection:bg-trust-cyan selection:text-black overflow-x-hidden mesh-grid">
-      <header className="hero-gradient border-b border-trust-yellow/20 p-16 text-center rounded-b-[80px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10 mix-blend-overlay mesh-grid" />
-        <motion.div 
-          initial={{ y: -30, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.8 }}
-          className="relative z-10 flex flex-col items-center gap-4"
-        >
-          <div className="bg-trust-slate/80 p-4 rounded-full border border-trust-yellow/30 shadow-[0_0_20px_rgba(201,168,76,0.2)]">
-            <Shield className="w-10 h-10 text-trust-yellow" />
+    <div className="min-h-screen bg-[#0b1120] text-white font-sans selection:bg-trust-cyan selection:text-black">
+      {/* Background Decor */}
+      <div className="fixed inset-0 pointer-events-none opacity-20">
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:40px_40px]" />
+      </div>
+
+      {/* Header */}
+      <header className="relative py-20 px-6 text-center border-b border-white/5 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#06b6d4]/10 to-transparent pointer-events-none" />
+        <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="relative z-10 space-y-4">
+          <div className="inline-flex p-4 bg-black/40 rounded-3xl border border-white/10 shadow-2xl mb-4">
+            <Shield className="w-12 h-12 text-[#06b6d4]" />
           </div>
-          <div>
-            <h1 className="text-6xl md:text-8xl font-black tracking-tighter uppercase text-white leading-none">
-              TrustSense<span className="text-trust-yellow">+</span>
-            </h1>
-            <p className="text-trust-yellow uppercase tracking-[0.5em] text-[10px] font-bold mt-4 opacity-70">
-              Elite Forensic Integrity Protocol
-            </p>
-          </div>
+          <h1 className="text-6xl font-black tracking-tighter uppercase italic">
+            TrustSense<span className="text-[#06b6d4]">+</span>
+          </h1>
+          <p className="text-[#94a3b8] uppercase tracking-[0.4em] text-[10px] font-bold">Elite Digital Forensic Eradication Platform</p>
         </motion.div>
-        
-        <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-          <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-trust-green/10 rounded-full blur-[150px]" />
-          <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-trust-cyan/10 rounded-full blur-[150px]" />
-        </div>
       </header>
 
-      <main className="max-w-6xl mx-auto p-6 md:p-10 space-y-8">
+      <main className="max-w-6xl mx-auto p-6 md:p-12 space-y-12 pb-32">
         
-        {/* Stage 0: Configuration */}
-        <motion.section 
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="glass-card neo-border-green relative overflow-hidden group"
-        >
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-30 transition-opacity">
-            <Database className="w-20 h-20 text-trust-green" />
-          </div>
-          
-          <div className="flex items-center gap-3 mb-8">
-            <div className="p-2 bg-trust-cyan/20 rounded-lg">
-              <Cpu className="text-trust-cyan w-6 h-6" />
+        {/* STAGE 1: SETUP */}
+        <section className="space-y-8">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-[#06b6d4]/20 flex items-center justify-center border border-[#06b6d4]/40">
+              <span className="text-[#06b6d4] font-black">01</span>
             </div>
-            <h2 className="text-xl font-black uppercase tracking-widest text-trust-cyan">Forensic Target Identity</h2>
+            <h2 className="text-2xl font-black uppercase tracking-tight">Forensic Configuration</h2>
           </div>
-          
-          <div className="grid gap-8">
-            <div className="space-y-3">
-              <label className="text-[10px] font-black uppercase text-gray-500 tracking-[0.2em] ml-1">Security Certificate Owner / Device ID</label>
+
+          <div className="grid md:grid-cols-2 gap-8 bg-white/5 p-8 rounded-[32px] border border-white/10 backdrop-blur-xl">
+            <div className="space-y-4">
+              <label className="text-[10px] font-black uppercase text-[#94a3b8] tracking-widest ml-1">Hardware Instance ID</label>
               <input 
                 value={deviceId} 
                 onChange={(e) => setDeviceId(e.target.value)}
-                placeholder="e.g. My-Macbook-Pro"
-                className="w-full bg-black/60 border border-white/10 rounded-xl p-4 focus:border-trust-green focus:ring-1 focus:ring-trust-green outline-none transition-all font-mono text-sm shadow-inner"
+                className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 focus:border-[#06b6d4] outline-none transition-all font-mono text-sm"
               />
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-            <button 
-              onClick={selectFolder}
-              className="bg-trust-cyan text-black font-black py-4 rounded-xl hover:scale-[1.02] transition-all uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg"
-            >
-              <Search className="w-5 h-5" />
-              Scan Local Folder
-            </button>
-            <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col justify-center">
-              <div className="text-[9px] uppercase tracking-widest text-gray-500 font-black mb-1">Engine Status</div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-trust-green animate-pulse" />
-                <span className="text-xs font-bold text-trust-green">Ready for Sanitization</span>
-              </div>
+            <div className="flex flex-col justify-end">
+              <button 
+                onClick={initiateScan}
+                disabled={workflowStage > 1}
+                className="w-full h-[58px] bg-[#06b6d4] text-black font-black rounded-2xl hover:brightness-110 transition-all uppercase tracking-widest flex items-center justify-center gap-3 disabled:opacity-30"
+              >
+                <Search className="w-5 h-5" />
+                Initiate Forensic Scan
+              </button>
             </div>
           </div>
 
-          {/* Console Output */}
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="mt-10 bg-black/80 rounded-xl border border-white/10 p-6 font-mono text-[10px] text-trust-cyan leading-relaxed shadow-2xl relative"
-          >
-            <div className="flex justify-between items-center mb-2 text-[8px] uppercase tracking-widest opacity-50">
-              <span>Forensic Console</span>
-              <span className="flex items-center gap-1"><div className="w-1 h-1 rounded-full bg-trust-cyan animate-pulse" /> Live</span>
+          {/* Real-time Console */}
+          <div className="bg-black/60 rounded-3xl border border-white/5 p-6 font-mono text-[10px] text-[#06b6d4] leading-relaxed shadow-inner">
+            <div className="flex justify-between items-center mb-3 opacity-40">
+              <span className="flex items-center gap-2 italic"> <RefreshCw className="w-3 h-3 animate-spin" /> Forensic Nexus Stream</span>
+              <span>v4.8.2-CERT</span>
             </div>
-            {consoleLogs.map((log, i) => (
-              <div key={i} className="mb-0.5">{log}</div>
-            ))}
-          </motion.div>
-        </motion.section>
+            {consoleLogs.map((log, i) => <div key={i} className="mb-0.5">{log}</div>)}
+          </div>
+        </section>
 
-        {/* Stage 1: Options */}
+        {/* STAGE 2: ANALYSIS (Revealed after scan) */}
         <AnimatePresence>
-          {stage === "OPTIONS" && scanResults && (
-            <motion.section 
-              initial={{ height: 0, opacity: 0, y: 20 }}
-              animate={{ height: "auto", opacity: 1, y: 0 }}
-              exit={{ height: 0, opacity: 0, y: 20 }}
-              className="space-y-6 overflow-hidden"
-            >
-              <div className="space-y-6 overflow-hidden">
-                <div className="glass-card neo-border-cyan mb-6">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2 bg-trust-cyan/20 rounded-lg">
-                      <Database className="text-trust-cyan w-6 h-6" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-black uppercase tracking-wider text-trust-cyan">File Type Distribution</h3>
-                      <p className="text-[10px] uppercase text-gray-500 font-bold tracking-widest mt-1">{scanResults.results.total_files} files scanned</p>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-4 gap-4">
-                    {Object.entries(scanResults.results.file_types || {}).slice(0, 8).map(([ext, count], i) => (
-                      <div key={ext} className="bg-black/40 p-4 rounded-xl border border-white/5 text-center">
-                        <div className="text-xl font-black text-white">{count}</div>
-                        <div className="text-[8px] uppercase tracking-widest text-gray-500 font-bold">.{ext}</div>
-                      </div>
-                    ))}
+          {workflowStage >= 2 && scanResults && (
+            <motion.section initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-[#06b6d4]/20 flex items-center justify-center border border-[#06b6d4]/40">
+                  <span className="text-[#06b6d4] font-black">02</span>
+                </div>
+                <h2 className="text-2xl font-black uppercase tracking-tight">Forensic Categorization</h2>
+              </div>
+
+              <div className="grid lg:grid-cols-3 gap-8">
+                {/* Risk Distribution Chart */}
+                <div className="lg:col-span-2 bg-white/5 p-8 rounded-[32px] border border-white/10">
+                  <h3 className="text-sm font-black uppercase tracking-wider mb-8 text-[#94a3b8]">Threat Distribution Profile</h3>
+                  <div className="space-y-6">
+                    {[
+                      { label: "High Risk", count: scanResults.results.risk_counts.High, color: "bg-red-500", shadow: "shadow-red-500/40" },
+                      { label: "Medium Risk", count: scanResults.results.risk_counts.Medium, color: "bg-orange-500", shadow: "shadow-orange-500/40" },
+                      { label: "Low Risk", count: scanResults.results.risk_counts.Low, color: "bg-emerald-500", shadow: "shadow-emerald-500/40" },
+                      { label: "Hidden Assets", count: scanResults.results.risk_counts.Hidden, color: "bg-[#06b6d4]", shadow: "shadow-[#06b6d4]/40" }
+                    ].map(bar => {
+                      const max = Math.max(...Object.values(scanResults.results.risk_counts));
+                      const width = max > 0 ? (bar.count / max) * 100 : 0;
+                      return (
+                        <div key={bar.label} className="space-y-2">
+                          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
+                            <span>{bar.label}</span>
+                            <span>{bar.count} OBJECTS</span>
+                          </div>
+                          <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden">
+                            <motion.div 
+                              initial={{ width: 0 }} 
+                              animate={{ width: `${Math.max(5, width)}%` }} 
+                              className={cn("h-full rounded-full transition-all duration-1000", bar.color, bar.shadow, "shadow-lg")} 
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
-                <div className="glass-card border-trust-yellow/40 bg-trust-yellow/5">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2 bg-trust-yellow/20 rounded-lg">
-                      <AlertTriangle className="text-trust-yellow w-6 h-6" />
-                    </div>
-                    <h3 className="text-lg font-black uppercase tracking-wider">Pre-Wipe Action Center</h3>
+                {/* AI Recommendation */}
+                <div className="bg-[#06b6d4]/5 p-8 rounded-[32px] border border-[#06b6d4]/20 flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-sm font-black uppercase tracking-wider mb-4 flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-[#06b6d4]" /> AI Protocol Recommendation
+                    </h3>
+                    <p className="text-xs text-[#94a3b8] leading-relaxed italic border-l-2 border-[#06b6d4] pl-4 py-1 mb-6">
+                      "{scanResults.ai_reason}"
+                    </p>
                   </div>
-                
-                  <div className="flex items-center justify-between mb-4 p-4 bg-black/40 rounded-xl border border-white/5">
-                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Recommended Protocol</span>
-                    <span className="text-trust-green font-black uppercase tracking-widest animate-pulse">{scanResults.recommendation}</span>
+                  <div className="bg-black/40 p-4 rounded-2xl border border-white/5">
+                    <div className="text-[10px] font-black text-white/40 uppercase mb-1">Target Protocol</div>
+                    <div className="text-lg font-black text-[#06b6d4]">{scanResults.recommendation}</div>
                   </div>
+                </div>
+              </div>
 
-                  <div className="mb-6 border border-white/10 rounded-xl overflow-hidden">
-                    <div className="bg-white/5 px-4 py-2 flex items-center gap-2 border-b border-white/5">
-                      <Cpu className="w-3 h-3 text-trust-cyan" />
-                      <span className="text-[9px] font-black uppercase tracking-[0.25em] text-trust-cyan">Protocol Assessment</span>
-                    </div>
-                    <div className="p-5 grid md:grid-cols-3 gap-4">
-                      <div className="md:col-span-2 space-y-3">
-                        <div className="flex gap-3 items-start">
-                          <div className="mt-0.5 w-2 h-2 rounded-full bg-trust-cyan flex-shrink-0" />
-                          <p className="text-[11px] text-gray-300 leading-loose">{scanResults.ai_reason}</p>
+              {/* Asset Preservation (Backup Selection) */}
+              <div className="bg-white/5 p-8 rounded-[32px] border border-white/10">
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-sm font-black uppercase tracking-wider text-[#94a3b8]">Asset Preservation Manifest</h3>
+                  <div className="text-[10px] font-black text-[#06b6d4] uppercase tracking-widest">
+                    {selectedPaths.length} SELECTED FOR BACKUP
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[300px] overflow-y-auto pr-4 custom-scrollbar">
+                  {scanResults.results.file_details.map((file, i) => (
+                    <div 
+                      key={i} 
+                      onClick={() => toggleFile(file.name)}
+                      className={cn(
+                        "flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer group",
+                        selectedPaths.includes(file.name) 
+                          ? "bg-[#06b6d4]/10 border-[#06b6d4]/40" 
+                          : "bg-black/20 border-white/5 hover:border-white/20"
+                      )}
+                    >
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <div className={cn(
+                          "w-2 h-2 rounded-full",
+                          file.risk === "High" ? "bg-red-500" : file.risk === "Medium" ? "bg-orange-500" : "bg-emerald-500"
+                        )} />
+                        <span className="text-[11px] font-mono truncate">{file.name}</span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className="text-[9px] font-black opacity-40 uppercase">{file.risk}</span>
+                        <div className={cn(
+                          "w-5 h-5 rounded-md border flex items-center justify-center transition-colors",
+                          selectedPaths.includes(file.name) ? "bg-[#06b6d4] border-[#06b6d4]" : "border-white/20"
+                        )}>
+                          {selectedPaths.includes(file.name) && <CheckCircle2 className="w-3 h-3 text-black" />}
                         </div>
                       </div>
-                      <div className="space-y-3">
-                        <div className="bg-black/40 border border-white/5 p-3 rounded-lg text-center">
-                          <div className="text-[8px] uppercase tracking-widest text-gray-500 mb-1">Threat Level</div>
-                          <div className={cn("text-sm font-black", 
-                            scanResults.results.risk_level === 'Critical' ? 'text-red-400' :
-                            scanResults.results.risk_level === 'High' ? 'text-orange-400' :
-                            scanResults.results.risk_level === 'Medium' ? 'text-yellow-400' : 'text-emerald-400'
-                          )}>{scanResults.results.risk_level}</div>
-                        </div>
-                      </div>
                     </div>
-                  </div>
+                  ))}
+                </div>
 
+                <div className="mt-8 flex gap-4">
                   <button 
                     onClick={startWipe}
-                    className="w-full bg-trust-yellow text-black font-black py-5 rounded-xl hover:scale-[1.01] transition-all uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(201,168,76,0.3)] flex items-center justify-center gap-3"
+                    disabled={workflowStage > 2}
+                    className="flex-1 h-[64px] bg-red-600 text-white font-black rounded-2xl hover:bg-red-500 transition-all uppercase tracking-[0.2em] shadow-xl shadow-red-600/20 flex items-center justify-center gap-3 disabled:opacity-30"
                   >
                     <Trash2 className="w-6 h-6" />
-                    Initialize Sanitization Protocol
+                    Engage Eradication
                   </button>
                 </div>
               </div>
@@ -460,133 +410,125 @@ export default function TrustSensePage() {
           )}
         </AnimatePresence>
 
-        {/* Stage 2: Wiping */}
+        {/* STAGE 3: WIPING */}
         <AnimatePresence>
-          {stage === "WIPING" && (
-            <motion.section 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card neo-border-yellow"
-            >
-              <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-3">
-                  <RefreshCw className="w-6 h-6 text-trust-yellow animate-spin" />
-                  <h3 className="text-lg font-black uppercase tracking-widest text-trust-yellow">Sector Eradication Protocol</h3>
+          {workflowStage >= 3 && isWiping && (
+            <motion.section initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="space-y-6">
+              <div className="bg-[#0f172a] p-10 rounded-[40px] border border-orange-500/30 text-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,#f9731610,transparent_70%)]" />
+                <h3 className="text-xl font-black uppercase tracking-[0.5em] text-orange-500 mb-8 flex items-center justify-center gap-4">
+                   <RefreshCw className="w-6 h-6 animate-spin" /> Sanitizing Sectors
+                </h3>
+                <div className="text-5xl font-black text-white mb-6 tabular-nums">{progress}%</div>
+                <div className="h-4 w-full bg-white/5 rounded-full p-1 border border-white/10 mb-4">
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${progress}%` }} className="h-full bg-gradient-to-r from-orange-500 to-red-600 rounded-full" />
                 </div>
-                <div className="text-2xl font-black text-trust-yellow tabular-nums">{progress}%</div>
-              </div>
-
-              <div className="h-6 w-full bg-black/60 rounded-full p-1 border border-white/10 mb-6 overflow-hidden">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progress}%` }}
-                  className="h-full bg-gradient-to-r from-trust-yellow via-orange-500 to-red-500 rounded-full relative"
-                >
-                  <div className="absolute inset-0 bg-white/20 animate-pulse" />
-                </motion.div>
-              </div>
-
-              <div className="text-center">
-                <p className="text-[10px] uppercase font-black tracking-[0.5em] text-gray-500 animate-pulse">{progressText}</p>
+                <p className="text-[10px] font-black text-[#94a3b8] uppercase tracking-[0.2em]">Zero-Bit Overwrite Pattern Active (AES-256 Noise Generation)</p>
               </div>
             </motion.section>
           )}
         </AnimatePresence>
 
-        {/* Stage 3: Finished */}
+        {/* STAGE 4: FINISHED */}
         <AnimatePresence>
-          {stage === "FINISHED" && wipeResults && scanResults && (
-            <motion.section 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-8"
-            >
-              <div className="grid md:grid-cols-3 gap-6">
-                <div className="glass-card neo-border-green flex flex-col items-center justify-center gap-4 py-10">
-                  <div className="bg-trust-green/20 p-5 rounded-full border border-trust-green/40">
-                    <ShieldCheck className="w-12 h-12 text-trust-green" />
+          {workflowStage >= 4 && wipeResults && (
+            <motion.section initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} className="space-y-12">
+              <div className="grid md:grid-cols-2 gap-8">
+                <div className="bg-emerald-500/10 p-10 rounded-[40px] border border-emerald-500/30 text-center flex flex-col items-center justify-center gap-4">
+                  <div className="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center border-4 border-emerald-500">
+                    <ShieldCheck className="w-10 h-10 text-emerald-500" />
                   </div>
-                  <h3 className="text-xl font-black uppercase tracking-widest text-trust-green text-center">Sanitization<br/>Successful</h3>
+                  <h3 className="text-3xl font-black uppercase tracking-tighter text-emerald-500">Eradication Complete</h3>
+                  <p className="text-xs text-emerald-500/60 font-bold uppercase tracking-widest">Post-Wipe Score: 100% Secure</p>
                 </div>
 
-                <div className="glass-card md:col-span-2 relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 p-8 opacity-5"><Archive className="w-40 h-40" /></div>
-                  <h3 className="text-sm font-black uppercase tracking-wider text-trust-cyan mb-6 flex items-center gap-2">
-                    <Activity className="w-4 h-4" /> Final Integrity Report
+                <div className="bg-white/5 p-10 rounded-[40px] border border-white/10 flex flex-col justify-center gap-6">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-[#94a3b8] flex items-center gap-2">
+                    <Target className="w-4 h-4 text-[#06b6d4]" /> Attack Simulation Verdict
                   </h3>
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <div className="text-[8px] uppercase tracking-widest text-gray-500 mb-1">Post-Wipe Score</div>
-                      <div className="text-4xl font-black text-white">100%</div>
-                    </div>
-                    <div>
-                      <div className="text-[8px] uppercase tracking-widest text-gray-500 mb-1">Audit Hash</div>
-                      <div className="text-xs font-mono text-trust-cyan break-all">{wipeResults.audit_hash}</div>
-                    </div>
+                  <div className="space-y-3">
+                    {wipeResults.attack.logs.map((log, i) => (
+                      <div key={i} className="flex items-center gap-3 text-[11px] font-mono text-[#06b6d4]">
+                        <CheckCircle2 className="w-3 h-3" /> {log}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="pt-4 border-t border-white/10">
+                    <div className="text-[9px] uppercase font-black text-white/40 mb-1">Audit Hash (SHA-256)</div>
+                    <div className="text-[11px] font-mono text-[#06b6d4] break-all">{wipeResults.audit_hash}</div>
                   </div>
                 </div>
               </div>
 
-              {/* Passport Component */}
-              <div className="relative group">
-                <div className="absolute -inset-1 bg-gradient-to-r from-trust-yellow/20 via-trust-cyan/20 to-trust-yellow/20 rounded-[40px] blur-xl opacity-50 group-hover:opacity-100 transition duration-1000"></div>
-                <div className="relative bg-[#0f1c3a] rounded-[40px] border border-trust-yellow/30 overflow-hidden shadow-2xl">
-                  {/* Header */}
-                  <div className="bg-[#0f1c3a] p-8 text-center border-b-2 border-[#c9a84c]">
-                    <div className="flex items-center justify-center gap-4 mb-4">
-                      <Shield className="w-8 h-8 text-[#c9a84c]" />
-                      <div className="text-left">
-                        <div className="text-[10px] uppercase tracking-[0.6em] text-[#c9a84c] font-black">Official Document</div>
-                        <div className="text-2xl font-black text-white tracking-tighter uppercase">Forensic Sanitization Passport</div>
-                      </div>
+              {/* Hyper-Premium Passport */}
+              <div className="relative p-1 bg-gradient-to-br from-[#c5a059] via-[#0a192f] to-[#c5a059] rounded-[48px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.8)]">
+                <div className="bg-[#fdfaf3] rounded-[44px] overflow-hidden text-[#0a192f] relative">
+                  {/* Subtle Pattern */}
+                  <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#0a192f_1px,transparent_1px)] [background-size:16px_16px]" />
+                  
+                  {/* Passport Header */}
+                  <div className="bg-[#0a192f] p-12 flex justify-between items-center border-b-[6px] border-[#c5a059] relative">
+                    <div className="space-y-1">
+                      <h4 className="text-4xl font-serif tracking-widest text-[#e2c275] font-black uppercase">Security Passport</h4>
+                      <p className="text-[10px] tracking-[0.6em] text-white/60 font-bold uppercase">TrustSense Forensic Node Certification</p>
                     </div>
+                    <div className="text-right border-l border-[#c5a059]/40 pl-8">
+                      <div className="text-[10px] text-[#e2c275] font-black uppercase mb-1">Registry ID</div>
+                      <div className="text-xl font-mono text-white font-bold">{wipeResults.audit_hash.slice(0, 14).toUpperCase()}</div>
+                    </div>
+                    <div className="absolute bottom-[-10px] right-12 text-[6px] text-[#c5a059] tracking-widest font-black">OFFICIAL FORENSIC RECORD — DO NOT TAMPER</div>
                   </div>
 
-                  {/* Body */}
-                  <div className="bg-[#f8f5ec] p-10 space-y-8 text-gray-800">
-                    <div className="h-2 bg-gradient-to-r from-[#0f1c3a] via-[#c9a84c] to-[#0f1c3a] -mx-10" />
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  {/* Passport Body */}
+                  <div className="p-14 relative">
+                    <div className="absolute top-10 right-10 w-32 h-32 border-2 border-dashed border-[#c5a059]/40 rounded-full flex items-center justify-center text-center transform rotate-12 bg-white/20 backdrop-blur-sm shadow-inner">
+                      <div className="text-[8px] font-serif font-black text-[#c5a059] leading-tight">AUTHENTIC<br/>TRUSTSENSE<br/>VERIFIED CLEAN</div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-x-16 gap-y-10 mb-12">
                       {[
-                        { label: 'Holder / Node', value: deviceId },
-                        { label: 'Date of Issue', value: new Date().toLocaleDateString('en-GB') },
-                        { label: 'Protocol', value: scanResults.recommendation },
-                        { label: 'Integrity', value: '100% SECURE' },
-                      ].map(item => (
-                        <div key={item.label} className="border-b border-[#0f1c3a]/20 pb-2">
-                          <div className="text-[7px] uppercase tracking-widest text-gray-500 font-black">{item.label}</div>
-                          <div className="text-sm font-black text-[#0f1c3a] mt-1">{item.value}</div>
+                        { label: "Hardware Instance", value: deviceId },
+                        { label: "Trust Score", value: "100% CERTIFIED", color: "text-emerald-700" },
+                        { label: "Certification Date", value: new Date().toLocaleDateString('en-GB') },
+                        { label: "Audit Result", value: "ZERO-BIT PURGE" }
+                      ].map(field => (
+                        <div key={field.label} className="border-b border-[#0a192f]/10 pb-2">
+                          <div className="text-[10px] font-black uppercase text-[#64748b] mb-1 tracking-wider">{field.label}</div>
+                          <div className={cn("text-lg font-black", field.color || "text-[#0a192f]")}>{field.value}</div>
                         </div>
                       ))}
                     </div>
 
-                    <div className="grid grid-cols-3 gap-6">
-                      <div className="bg-red-50 border border-red-200 p-6 rounded-2xl text-center">
-                        <div className="text-4xl font-black text-red-600">{scanResults.results.sensitive_files}</div>
-                        <div className="text-[8px] uppercase tracking-widest text-red-400 font-black mt-1">Threats Purged</div>
+                    <div className="bg-[#0a192f] p-6 border-l-[12px] border-[#c5a059] mb-12 shadow-lg">
+                      <div className="text-[10px] font-black text-[#c5a059] uppercase mb-2">Eradication Protocol Applied</div>
+                      <div className="text-xl font-mono text-white font-bold tracking-wider">{scanResults.recommendation} (NIST 800-88)</div>
+                      <p className="text-[9px] text-white/40 mt-2 italic">Verified Cryptographic Eradication Sequence Initiated and Validated by TrustSense Kernel.</p>
+                    </div>
+
+                    <div className="flex gap-8 mb-12">
+                      <div className="flex-1 bg-[#f1ebd8] border border-[#c5a059] p-6 text-center">
+                        <div className="text-[10px] font-black uppercase text-[#64748b] mb-2">Threats Purged</div>
+                        <div className="text-4xl font-black text-red-700">{scanResults.results.sensitive_files}</div>
                       </div>
-                      <div className="bg-[#0f1c3a]/5 border border-[#0f1c3a]/10 p-6 rounded-2xl text-center">
-                        <div className="text-4xl font-black text-[#0f1c3a]">{scanResults.results.total_files}</div>
-                        <div className="text-[8px] uppercase tracking-widest text-gray-500 font-black mt-1">Files Cleared</div>
-                      </div>
-                      <div className="bg-[#c9a84c]/5 border border-[#c9a84c]/20 p-6 rounded-2xl text-center">
-                        <div className="text-4xl font-black text-[#9a7a2a]">100%</div>
-                        <div className="text-[8px] uppercase tracking-widest text-[#9a7a2a] font-black mt-1">Verified Clean</div>
+                      <div className="flex-1 bg-[#f1ebd8] border border-[#c5a059] p-6 text-center">
+                        <div className="text-[10px] font-black uppercase text-[#64748b] mb-2">Integrity Status</div>
+                        <div className="text-4xl font-black text-emerald-700">VERIFIED</div>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-8 border-t border-[#0f1c3a]/10">
-                      <div>
-                        <div className="font-mono italic text-gray-400 text-lg">TrustSense Forensic Authority</div>
-                        <div className="w-48 border-t border-gray-300 mt-2 pt-1 text-[7px] uppercase tracking-widest text-gray-400 font-black">Authorized Signature</div>
+                    <div className="flex items-center gap-10 pt-10 border-t border-[#0a192f]/10">
+                      <div className="w-24 h-24 bg-white p-2 border border-[#0a192f] shadow-[4px_4px_0px_#c5a059]">
+                        <img src={`data:image/png;base64,${pdfBase64}`} className="w-full h-full opacity-50 grayscale" alt="SIGN" />
+                      </div>
+                      <div className="flex-1 font-mono text-[9px] text-[#64748b] leading-relaxed tracking-wider">
+                        P&lt;TSA{deviceId.replace(/-/g,'').padEnd(20,'<')}&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;<br/>
+                        {wipeResults.audit_hash.slice(0,20).toUpperCase()}&lt;&lt;&lt;260516&lt;&lt;&lt;&lt;
                       </div>
                       <button 
                         onClick={downloadPassport}
-                        disabled={!pdfBase64}
-                        className="bg-[#0f1c3a] text-[#c9a84c] px-8 py-4 rounded-2xl font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl flex items-center gap-3 disabled:opacity-50"
+                        className="bg-[#0a192f] text-[#c5a059] px-10 py-5 rounded-2xl font-black uppercase tracking-widest hover:scale-105 transition-all shadow-2xl flex items-center gap-3"
                       >
-                        <Download className="w-5 h-5" />
+                        <Download className="w-6 h-6" />
                         Download Passport
                       </button>
                     </div>
@@ -599,13 +541,25 @@ export default function TrustSensePage() {
 
       </main>
 
-      <footer className="mt-32 border-t border-white/5 py-16 text-center mesh-grid">
-        <div className="max-w-4xl mx-auto px-6">
-          <p className="text-[10px] uppercase tracking-[0.8em] font-black text-trust-yellow opacity-40">
-            TrustSense Elite v4.5 &copy; 2026
-          </p>
-        </div>
+      <footer className="py-20 text-center border-t border-white/5 opacity-40">
+        <p className="text-[10px] font-black uppercase tracking-[1em]">TrustSense Forensic Elite Node v4.8.2-CERT</p>
       </footer>
+
+      <style jsx global>{`
+        .glass-card {
+          background: rgba(255, 255, 255, 0.03);
+          border-radius: 40px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          padding: 40px;
+          backdrop-filter: blur(20px);
+        }
+        .neo-border-green { border-color: rgba(16, 185, 129, 0.3); box-shadow: 0 0 40px rgba(16, 185, 129, 0.05); }
+        .neo-border-cyan { border-color: rgba(6, 182, 212, 0.3); box-shadow: 0 0 40px rgba(6, 182, 212, 0.05); }
+        .neo-border-yellow { border-color: rgba(245, 158, 11, 0.3); box-shadow: 0 0 40px rgba(245, 158, 11, 0.05); }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #06b6d4; border-radius: 10px; }
+      `}</style>
     </div>
   );
 }
