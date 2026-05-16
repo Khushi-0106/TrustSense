@@ -2,11 +2,18 @@ import os
 import sys
 import base64
 import hashlib
-import socket
 from datetime import datetime
 from io import BytesIO
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+
+# Add parent directory so processing/ and core/ are importable
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+try:
+    from processing.neo_pdf import generate_neo_pdf as _gen_pdf
+    _PDF_MODULE = True
+except Exception:
+    _PDF_MODULE = False
 
 app = Flask(__name__)
 CORS(app)
@@ -210,7 +217,9 @@ def certify():
 def certificate():
     data = request.json or {}
     try:
-        pdf_bytes  = generate_neo_pdf(data)
+        # Prefer the clean module version; fall back to inlined
+        fn = _gen_pdf if _PDF_MODULE else generate_neo_pdf
+        pdf_bytes  = fn(data)
         pdf_base64 = base64.b64encode(pdf_bytes).decode()
         return jsonify({"pdf_base64": pdf_base64})
     except Exception as e:

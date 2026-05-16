@@ -155,7 +155,12 @@ export default function TrustSensePage() {
           file_types: extensions,
           files: fileList.map(f => f.name).slice(0, 10),
           file_details: fileList,
-          risk_breakdown: { critical: criticalCount, high: highCount, medium: medCount, low: lowCount }
+          risk_breakdown: {
+            critical: criticalCount,
+            high: highCount,
+            medium: medCount,
+            low: lowCount
+          }
         },
         recommendation,
         ai_reason: aiReason
@@ -324,7 +329,6 @@ export default function TrustSensePage() {
       addLog("Certificate generated.");
       
       addLog("Packaging PDF Passport...");
-      // Generate PDF
       const pdfRes = await fetch("/api/certificate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -332,9 +336,15 @@ export default function TrustSensePage() {
           device_id: deviceId,
           hash: data.cert.hash,
           trust_score: 100,
+          before_score: scanResults.score,
           files_sensitive: scanResults.results.sensitive_files,
-          files_safe: scanResults.results.total_files - scanResults.results.sensitive_files,
-          date: new Date().toISOString().split('T')[0]
+          files_safe: scanResults.results.total_files,
+          protocol: scanResults.recommendation,
+          risk_level: scanResults.results.risk_level,
+          file_types: scanResults.results.file_types,
+          risk_breakdown: scanResults.results.risk_breakdown,
+          ai_reason: scanResults.ai_reason,
+          date: new Date().toLocaleDateString('en-GB')
         })
       });
       const pdfData = await pdfRes.json();
@@ -352,25 +362,25 @@ export default function TrustSensePage() {
 
   return (
     <div className="min-h-screen bg-[#0b1120] text-white selection:bg-trust-cyan selection:text-black overflow-x-hidden mesh-grid">
-      <div className="scanline" />
-      
-      {/* Hero Header */}
-      <header className="hero-gradient border-b border-trust-green/40 p-12 text-center rounded-b-[60px] shadow-2xl relative overflow-hidden">
+      <header className="hero-gradient border-b border-trust-yellow/20 p-16 text-center rounded-b-[80px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10 mix-blend-overlay mesh-grid" />
         <motion.div 
           initial={{ y: -30, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          className="relative z-10"
+          transition={{ duration: 0.8 }}
+          className="relative z-10 flex flex-col items-center gap-4"
         >
-          <div className="inline-block px-4 py-1 bg-trust-cyan/10 border border-trust-cyan/30 rounded-full text-[10px] font-black uppercase tracking-[0.4em] text-trust-cyan mb-6">
-            Military Grade Sanitization
+          <div className="bg-trust-slate/80 p-4 rounded-full border border-trust-yellow/30 shadow-[0_0_20px_rgba(201,168,76,0.2)]">
+            <Shield className="w-10 h-10 text-trust-yellow" />
           </div>
-          <h1 className="text-6xl md:text-8xl font-black tracking-tighter uppercase text-white leading-none">
-            TrustSense<span className="text-trust-cyan">+</span>
-          </h1>
-          <p className="text-trust-green uppercase tracking-[0.5em] text-xs font-bold mt-4 opacity-70">
-            Advanced Forensic Integrity Mesh
-          </p>
+          <div>
+            <h1 className="text-6xl md:text-8xl font-black tracking-tighter uppercase text-white leading-none">
+              TrustSense<span className="text-trust-yellow">+</span>
+            </h1>
+            <p className="text-trust-yellow uppercase tracking-[0.5em] text-[10px] font-bold mt-4 opacity-70">
+              Elite Forensic Integrity Protocol
+            </p>
+          </div>
         </motion.div>
         
         {/* Background Decorative Elements */}
@@ -552,13 +562,19 @@ export default function TrustSensePage() {
                       { label: 'High', count: scanResults.results.risk_breakdown?.high || 0, color: 'bg-orange-500', text: 'text-orange-400' },
                       { label: 'Medium', count: scanResults.results.risk_breakdown?.medium || 0, color: 'bg-yellow-500', text: 'text-yellow-400' },
                       { label: 'Low', count: scanResults.results.risk_breakdown?.low || 0, color: 'bg-emerald-500', text: 'text-emerald-400' }
-                    ].map(r => (
-                      <div key={r.label} className="bg-black/40 border border-white/5 p-3 rounded-lg text-center">
-                        <div className={`w-full h-1 ${r.color} rounded-full mb-2`} />
-                        <div className={`text-2xl font-black ${r.text}`}>{r.count}</div>
-                        <div className="text-[8px] uppercase tracking-widest text-gray-500 font-bold mt-1">{r.label}</div>
-                      </div>
-                    ))}
+                    ].map(r => {
+                      const pct = scanResults.results.total_files > 0 
+                        ? Math.round((r.count / scanResults.results.total_files) * 100) 
+                        : 0;
+                      return (
+                        <div key={r.label} className="bg-black/40 border border-white/5 p-3 rounded-lg text-center relative overflow-hidden group">
+                          <div className={`absolute top-0 left-0 h-0.5 ${r.color} transition-all duration-1000`} style={{ width: `${pct}%` }} />
+                          <div className={`text-2xl font-black ${r.text}`}>{r.count}</div>
+                          <div className="text-[7px] font-mono text-gray-500 mt-0.5">{pct}% of total</div>
+                          <div className="text-[8px] uppercase tracking-widest text-gray-400 font-bold mt-1">{r.label}</div>
+                        </div>
+                      );
+                    })}
                   </div>
                   
                   {/* File Details Table */}

@@ -9,11 +9,13 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        "trust-green": "#B2F2BB",
-        "trust-yellow": "#FFF3BF",
-        "trust-cyan": "#06b6d4",
-        "trust-dark": "#1A1A1A",
-        "trust-slate": "#0b1120",
+        "trust-green":  "#10b981",   // emerald — verification, success
+        "trust-yellow": "#c9a84c",   // gold — accents, highlights
+        "trust-cyan":   "#38bdf8",   // sky blue — data, info
+        "trust-dark":   "#0a1628",   // deepest navy
+        "trust-slate":  "#0f1c3a",   // navy — primary dark bg
+        "trust-navy":   "#1a2744",   // mid navy — cards
+        "trust-gold":   "#c9a84c",   // gold alias
       },
       animation: {
         glow: "glow 2s infinite ease-in-out",

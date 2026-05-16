@@ -3,8 +3,11 @@
 @tailwind utilities;
 
 :root {
-  --background: #0b1120;
-  --foreground: #ffffff;
+  --background: #080e1c;
+  --foreground: #f0f4ff;
+  --gold: #c9a84c;
+  --navy: #0f1c3a;
+  --navy-mid: #1a2744;
 }
 
 body {
@@ -14,49 +17,62 @@ body {
 }
 
 @utility glass-card {
-  background-color: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: rgba(26, 39, 68, 0.6);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(201, 168, 76, 0.15);
   border-radius: 0.75rem;
   padding: 1.5rem;
 }
 
 @utility neo-border-green {
   border-width: 2px;
-  border-color: var(--color-trust-green);
-  box-shadow: 4px 4px 0px #B2F2BB;
+  border-color: #10b981;
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.2);
+}
+
+@utility neo-border-cyan {
+  border-width: 1px;
+  border-color: rgba(56, 189, 248, 0.3);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.05);
 }
 
 @utility neo-border-yellow {
   border-width: 2px;
-  border-color: var(--color-trust-yellow);
-  box-shadow: 4px 4px 0px #FFF3BF;
+  border-color: #c9a84c;
+  box-shadow: 0 0 0 1px rgba(201, 168, 76, 0.2);
 }
 
 .hero-gradient {
-  background: radial-gradient(circle at top right, rgba(6, 182, 212, 0.15), transparent),
-              radial-gradient(circle at bottom left, rgba(178, 242, 187, 0.1), transparent),
-              var(--background);
+  background:
+    radial-gradient(ellipse at top right, rgba(56, 189, 248, 0.12), transparent 55%),
+    radial-gradient(ellipse at bottom left, rgba(16, 185, 129, 0.08), transparent 55%),
+    linear-gradient(180deg, #0f1c3a 0%, #080e1c 100%);
 }
 
 .scanline {
   width: 100%;
-  height: 100px;
+  height: 120px;
   z-index: 99;
-  background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(6, 182, 212, 0.1) 50%, rgba(0, 0, 0, 0) 100%);
-  opacity: 0.1;
+  background: linear-gradient(
+    0deg,
+    rgba(0,0,0,0) 0%,
+    rgba(201, 168, 76, 0.06) 50%,
+    rgba(0,0,0,0) 100%
+  );
+  opacity: 0.6;
   position: absolute;
   bottom: 100%;
-  animation: scanline 6s linear infinite;
+  animation: scanline 8s linear infinite;
 }
 
 @keyframes scanline {
-  0% { bottom: 100%; }
-  100% { bottom: -100px; }
+  0%   { bottom: 100%; }
+  100% { bottom: -120px; }
 }
 
 .mesh-grid {
-  background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-                    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
+  background-image:
+    linear-gradient(rgba(201, 168, 76, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(201, 168, 76, 0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
 }
