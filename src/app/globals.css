@@ -16,30 +16,32 @@ body {
   font-family: 'Inter', system-ui, sans-serif;
 }
 
-@utility glass-card {
-  background-color: rgba(26, 39, 68, 0.6);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(201, 168, 76, 0.15);
-  border-radius: 0.75rem;
-  padding: 1.5rem;
-}
+@layer components {
+  .glass-card {
+    background-color: rgba(26, 39, 68, 0.6);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(201, 168, 76, 0.15);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+  }
 
-@utility neo-border-green {
-  border-width: 2px;
-  border-color: #10b981;
-  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.2);
-}
+  .neo-border-green {
+    border-width: 2px;
+    border-color: #10b981;
+    box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.2);
+  }
 
-@utility neo-border-cyan {
-  border-width: 1px;
-  border-color: rgba(56, 189, 248, 0.3);
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.05);
-}
+  .neo-border-cyan {
+    border-width: 1px;
+    border-color: rgba(56, 189, 248, 0.3);
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.05);
+  }
 
-@utility neo-border-yellow {
-  border-width: 2px;
-  border-color: #c9a84c;
-  box-shadow: 0 0 0 1px rgba(201, 168, 76, 0.2);
+  .neo-border-yellow {
+    border-width: 2px;
+    border-color: #c9a84c;
+    box-shadow: 0 0 0 1px rgba(201, 168, 76, 0.2);
+  }
 }
 
 .hero-gradient {
