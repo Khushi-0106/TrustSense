@@ -126,7 +126,7 @@ def generate_neo_pdf(data):
     qr_img = qr.make_image(fill_color="#10B981", back_color="#050B14") # Trust green on dark bg
     
     qr_buffer = BytesIO()
-    qr_img.save(qr_buffer, format="PNG")
+    qr_img.save(qr_buffer)  # PyPNGImage.save() takes no format= arg; PNG is default
     qr_buffer.seek(0)
     qr_reportlab = Image(qr_buffer, width=1.5*inch, height=1.5*inch)
     
