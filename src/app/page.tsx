@@ -265,7 +265,7 @@ export default function TrustSensePage() {
               wipedCount++;
               
               addLog(`[ERADICATED] ${entry.name}`);
-              setProgress(Math.min(90, (wipedCount / scanResults.results.total_files) * 100));
+              setProgress(Math.floor(Math.min(90, (wipedCount / scanResults.results.total_files) * 100)));
             } catch (e) {
               addLog(`[FAILED] Could not eradicate ${entry.name}`);
               console.error(e);
@@ -293,7 +293,7 @@ export default function TrustSensePage() {
         "Verifying destruction..."
       ];
       for (let i = 0; i <= 100; i++) {
-        setProgress(i);
+        setProgress(Math.floor(i));
         if (i < 25) setProgressText(steps[0]);
         else if (i < 70) setProgressText(steps[1]);
         else if (i < 90) setProgressText(steps[2]);
@@ -361,7 +361,7 @@ export default function TrustSensePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b1120] text-white selection:bg-trust-cyan selection:text-black overflow-x-hidden mesh-grid">
+    <div className="min-h-screen bg-trust-dark text-white selection:bg-trust-cyan selection:text-black overflow-x-hidden mesh-grid">
       <header className="hero-gradient border-b border-trust-yellow/20 p-16 text-center rounded-b-[80px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative overflow-hidden">
         <div className="absolute inset-0 opacity-10 mix-blend-overlay mesh-grid" />
         <motion.div 

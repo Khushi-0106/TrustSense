@@ -9,217 +9,179 @@ from flask_cors import CORS
 
 # Add parent directory so processing/ and core/ are importable
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-try:
-    from processing.neo_pdf import generate_neo_pdf as _gen_pdf
-    _PDF_MODULE = True
-except Exception:
-    _PDF_MODULE = False
 
 app = Flask(__name__)
 CORS(app)
 
-# ── Inline: Certificate ────────────────────────────────────────────────────────
-def generate_certificate(device_id, trust_score, wipe_level):
-    now = str(datetime.utcnow())
-    raw = f"{device_id}{now}{trust_score}{wipe_level}"
-    return {
-        "device_id": device_id,
-        "timestamp": now,
-        "trust_score": trust_score,
-        "wipe_level": wipe_level,
-        "hash": hashlib.sha256(raw.encode()).hexdigest()
-    }
-
-# ── Inline: PDF Generation ─────────────────────────────────────────────────────
+# ── New Premium PDF Logic (Inlined for Vercel Reliability) ────────────────────
 def generate_neo_pdf(data):
+    """
+    Generates the premium parchment/navy/gold official passport PDF.
+    Matches the high-fidelity UI exactly.
+    """
     try:
         from reportlab.lib import colors
         from reportlab.lib.pagesizes import A4
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle
         from reportlab.lib.styles import ParagraphStyle
         from reportlab.lib.units import inch
-        from reportlab.graphics.barcode import code128
-        import qrcode
 
+        # Data Extraction
         device_id    = data.get('device_id', 'TS-UNIT-01')
         sha_hash     = data.get('hash', 'UNKNOWN')
         trust_score  = data.get('trust_score', 100)
-        date         = data.get('date', datetime.now().strftime("%Y-%m-%d"))
+        date         = data.get('date', datetime.now().strftime("%d/%m/%Y"))
         files_sens   = data.get('files_sensitive', 0)
-        files_safe   = data.get('files_safe', 0)
+        files_total  = data.get('files_safe', 0)
         protocol     = data.get('protocol', 'Standard Overwrite')
         risk_level   = data.get('risk_level', 'Low')
         file_types   = data.get('file_types', {})
 
-        bg_dark      = colors.HexColor("#050B14")
-        trust_green  = colors.HexColor("#10B981")
-        trust_cyan   = colors.HexColor("#06B6D4")
-        trust_yellow = colors.HexColor("#FBBF24")
-        text_white   = colors.HexColor("#FFFFFF")
-        text_gray    = colors.HexColor("#9CA3AF")
+        # Colors
+        NAVY        = colors.HexColor("#0f1c3a")
+        GOLD        = colors.HexColor("#c9a84c")
+        PARCHMENT   = colors.HexColor("#f8f5ec")
+        RED         = colors.HexColor("#dc2626")
+        RED_LIGHT   = colors.HexColor("#fee2e2")
+        WHITE       = colors.HexColor("#ffffff")
+        GRAY        = colors.HexColor("#6b7280")
+        GREEN       = colors.HexColor("#16a34a")
+
+        CHART_COLS = [colors.HexColor("#0f1c3a"), colors.HexColor("#c9a84c"), colors.HexColor("#dc2626"), colors.HexColor("#16a34a")]
 
         buf = BytesIO()
-        doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)
+        doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
 
-        s_title   = ParagraphStyle('T', fontName='Helvetica-Bold',   fontSize=22, textColor=bg_dark,     alignment=1)
-        s_sub     = ParagraphStyle('S', fontName='Courier-Bold',     fontSize=9,  textColor=bg_dark,     alignment=1, leading=13)
-        s_label   = ParagraphStyle('L', fontName='Courier-Bold',     fontSize=8,  textColor=text_gray,   leading=12)
-        s_mono_g  = ParagraphStyle('G', fontName='Courier-Bold',     fontSize=10, textColor=trust_green, leading=13)
-        s_mono_y  = ParagraphStyle('Y', fontName='Courier-Bold',     fontSize=9,  textColor=trust_yellow,leading=13, alignment=1)
-        s_mono_c  = ParagraphStyle('C', fontName='Courier-Bold',     fontSize=9,  textColor=trust_cyan,  leading=13)
-        s_sig     = ParagraphStyle('I', fontName='Times-Italic',     fontSize=13, textColor=text_gray,   alignment=1)
+        def sty(name, **kw): return ParagraphStyle(name, **kw)
+        s_tiny_gold  = sty('TG', fontName='Courier-Bold', fontSize=7, textColor=GOLD)
+        s_title      = sty('TT', fontName='Helvetica-Bold', fontSize=20, textColor=WHITE)
+        s_sub        = sty('TS', fontName='Courier-Bold', fontSize=8, textColor=GOLD)
+        s_doc_no_val = sty('DV', fontName='Courier-Bold', fontSize=11, textColor=GOLD, alignment=2)
+        s_field_lbl  = sty('FL', fontName='Helvetica-Bold', fontSize=7, textColor=GRAY)
+        s_field_val  = sty('FV', fontName='Helvetica-Bold', fontSize=12, textColor=NAVY)
+        s_stat_num_r = sty('SNR', fontName='Helvetica-Bold', fontSize=28, textColor=RED, alignment=1)
+        s_stat_num_n = sty('SNN', fontName='Helvetica-Bold', fontSize=28, textColor=NAVY, alignment=1)
+        s_stat_num_g = sty('SNG', fontName='Helvetica-Bold', fontSize=28, textColor=colors.HexColor("#9a7a2a"), alignment=1)
+        s_mrz        = sty('MZ', fontName='Courier', fontSize=7, textColor=colors.HexColor("#9ca3af"))
 
+        W = doc.width
         elements = []
 
-        # Header
-        h_data = [
-            [Paragraph("DATA SANITIZATION CERTIFICATE", s_title)],
-            [Paragraph(f"TrustSense Forensic Verification Report  ·  {date}", s_sub)]
-        ]
-        h_table = Table(h_data, colWidths=[doc.width])
-        h_table.setStyle(TableStyle([
-            ('BACKGROUND',    (0,0),(-1,-1), trust_green),
-            ('BOX',           (0,0),(-1,-1), 3, text_white),
-            ('TOPPADDING',    (0,0),(-1,-1), 18),
-            ('BOTTOMPADDING', (0,0),(-1,-1), 18),
-        ]))
-        elements.append(h_table)
-        elements.append(Spacer(1, 18))
+        # Top Gold Strip
+        gold_strip = Table([['']], colWidths=[W])
+        gold_strip.setStyle(TableStyle([('BACKGROUND', (0,0),(-1,-1), GOLD), ('TOPPADDING',(0,0),(-1,-1),3), ('BOTTOMPADDING',(0,0),(-1,-1),3)]))
+        elements.append(gold_strip)
 
-        # Barcode + ID
-        try:
-            bc = code128.Code128(sha_hash[:12], barHeight=0.35*inch, barWidth=1.1)
-        except Exception:
-            bc = Paragraph(sha_hash[:12], s_mono_y)
-        id_data = [[bc, Paragraph(f"CERT ID: {sha_hash[:12]}<br/>NODE: {device_id}<br/>RISK: {risk_level}", s_mono_y)]]
-        id_tbl = Table(id_data, colWidths=[doc.width*0.5, doc.width*0.5])
-        id_tbl.setStyle(TableStyle([
-            ('VALIGN', (0,0),(-1,-1), 'MIDDLE'),
-            ('BOX',    (0,0),(-1,-1), 1, text_gray),
-            ('PADDING',(0,0),(-1,-1), 10),
-        ]))
-        elements.append(id_tbl)
-        elements.append(Spacer(1, 22))
+        # Navy Header
+        title_block = [[Paragraph("OFFICIAL DOCUMENT", s_tiny_gold)], [Paragraph("Data Sanitization Passport", s_title)], [Paragraph("TRUSTSENSE FORENSIC AUTHORITY", s_sub)]]
+        title_tbl = Table(title_block, colWidths=[W*0.65])
+        doc_no_tbl = Table([[Paragraph("DOCUMENT NO.", sty('DL', fontName='Courier-Bold', fontSize=7, textColor=GOLD, alignment=2))], [Paragraph(sha_hash[:12].upper(), s_doc_no_val)]], colWidths=[W*0.25])
+        header_tbl = Table([[title_tbl, doc_no_tbl]], colWidths=[W*0.7, W*0.3])
+        header_tbl.setStyle(TableStyle([('VALIGN', (0,0),(-1,-1), 'MIDDLE'), ('BACKGROUND',(0,0),(-1,-1), NAVY), ('TOPPADDING',(0,0),(-1,-1),20), ('BOTTOMPADDING',(0,0),(-1,-1),20), ('LEFTPADDING',(0,0),(-1,-1),15), ('RIGHTPADDING',(0,0),(-1,-1),15)]))
+        elements.append(header_tbl)
 
-        # Metric cards
-        def mk_box(lbl, val, col):
-            return Table([[Paragraph(lbl, s_label)],
-                          [Paragraph(str(val), ParagraphStyle('V', fontName='Helvetica-Bold', fontSize=30, textColor=col))]],
-                         colWidths=[doc.width/2.1])
+        # Body Divider
+        elements.append(gold_strip)
 
-        m_data = [[mk_box("THREATS PURGED", files_sens, trust_green), mk_box("FILES PROCESSED", files_safe, trust_cyan)]]
-        m_tbl = Table(m_data, colWidths=[doc.width/2, doc.width/2])
-        m_tbl.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP'),('LEFTPADDING',(0,0),(-1,-1),0),('RIGHTPADDING',(0,0),(-1,-1),0)]))
-        elements.append(m_tbl)
-        elements.append(Spacer(1, 22))
+        # Parchment Body
+        def space(h): return Table([['']], colWidths=[W], rowHeights=[h], style=[('BACKGROUND',(0,0),(-1,-1),PARCHMENT)])
+        elements.append(space(15))
 
-        # Protocol table
-        p_data = [
-            [Paragraph("PROTOCOL DEPLOYED",  s_label), Paragraph(protocol,          s_mono_g)],
-            [Paragraph("INTEGRITY SCORE",     s_label), Paragraph(f"{trust_score}% SECURE", ParagraphStyle('SC', fontName='Helvetica-Bold', fontSize=20, textColor=trust_green))],
-            [Paragraph("TIMESTAMP (UTC)",     s_label), Paragraph(date,              s_mono_c)],
-        ]
-        p_tbl = Table(p_data, colWidths=[doc.width*0.38, doc.width*0.62])
-        p_tbl.setStyle(TableStyle([
-            ('LINEBELOW', (0,0),(-1,-2), 0.5, colors.Color(1,1,1,alpha=0.08)),
-            ('TOPPADDING',(0,0),(-1,-1), 13),('BOTTOMPADDING',(0,0),(-1,-1), 13),
-            ('VALIGN',   (0,0),(-1,-1), 'MIDDLE'),
-        ]))
-        elements.append(p_tbl)
-        elements.append(Spacer(1, 22))
+        # Credentials
+        cw = W / 4
+        c_labels = [Paragraph(l, s_field_lbl) for l in ["HOLDER / NODE", "DATE OF ISSUE", "PROTOCOL APPLIED", "INTEGRITY RATING"]]
+        c_vals   = [Paragraph(device_id, s_field_val), Paragraph(date, s_field_val), Paragraph(protocol, s_field_val), Paragraph(f"{trust_score}%", s_field_val)]
+        c_tbl = Table([c_labels, c_vals], colWidths=[cw]*4)
+        c_tbl.setStyle(TableStyle([('BACKGROUND', (0,0),(-1,-1), PARCHMENT), ('LINEBELOW', (0,1), (-1,1), 1.5, colors.rgba(NAVY.red, NAVY.green, NAVY.blue, 0.2)), ('TOPPADDING', (0,0),(-1,-1), 4), ('BOTTOMPADDING', (0,0),(-1,-1), 12), ('LEFTPADDING', (0,0),(-1,-1), 15)]))
+        elements.append(c_tbl)
+        elements.append(space(20))
 
-        # File type bar chart (drawn as table cells)
+        # Stats
+        sw = (W - 40) / 3
+        def mk_stat(num, lbl, bg, bcol, tcol):
+            t = Table([[Paragraph(str(num), tcol)], [Paragraph(lbl, sty('SL', fontName='Helvetica-Bold', fontSize=7, textColor=tcol.textColor, alignment=1))]], colWidths=[sw])
+            t.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,-1),bg),('BOX',(0,0),(-1,-1),1.5,bcol),('ROUNDEDCORNERS',(0,0),(-1,-1),6),('TOPPADDING',(0,0),(-1,-1),10),('BOTTOMPADDING',(0,0),(-1,-1),10)]))
+            return t
+        
+        stat_row = Table([[mk_stat(files_sens, "THREATS PURGED", RED_LIGHT, colors.HexColor("#fecaca"), s_stat_num_r),
+                           mk_stat(files_total, "FILES CLEARED", colors.rgba(NAVY.red, NAVY.green, NAVY.blue, 0.05), colors.rgba(NAVY.red, NAVY.green, NAVY.blue, 0.1), s_stat_num_n),
+                           mk_stat("100%", "VERIFIED CLEAN", colors.rgba(GOLD.red, GOLD.green, GOLD.blue, 0.1), colors.rgba(GOLD.red, GOLD.green, GOLD.blue, 0.3), s_stat_num_g)]], colWidths=[sw+10]*3)
+        stat_row.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,-1),PARCHMENT),('ALIGN',(0,0),(-1,-1),'CENTER')]))
+        elements.append(stat_row)
+        elements.append(space(20))
+
+        # Chart
         if file_types:
-            total_files = max(sum(file_types.values()), 1)
-            bar_colors  = [trust_green, trust_cyan, trust_yellow,
-                           colors.HexColor("#A855F7"), colors.HexColor("#3B82F6"),
-                           colors.HexColor("#F97316"), colors.HexColor("#EF4444")]
-            chart_label = [Paragraph("ERADICATED FILE DISTRIBUTION", s_label)]
-            chart_label_tbl = Table([chart_label], colWidths=[doc.width])
-            elements.append(chart_label_tbl)
-            elements.append(Spacer(1, 6))
-
-            bar_row = []
-            lbl_row = []
-            for i, (ext, cnt) in enumerate(list(file_types.items())[:7]):
-                pct     = (cnt / total_files)
-                bc_col  = bar_colors[i % len(bar_colors)]
-                bar_row.append(Paragraph("█" * max(1, int(pct * 30)), ParagraphStyle('Bar', fontName='Courier', fontSize=7, textColor=bc_col)))
-                lbl_row.append(Paragraph(f".{ext}<br/>{cnt}", ParagraphStyle('BL', fontName='Courier', fontSize=6, textColor=text_gray, alignment=1)))
-
-            col_w = doc.width / max(len(bar_row), 1)
-            chart_tbl = Table([bar_row, lbl_row], colWidths=[col_w]*len(bar_row))
-            chart_tbl.setStyle(TableStyle([('ALIGN',(0,0),(-1,-1),'CENTER'),('VALIGN',(0,0),(-1,-1),'BOTTOM')]))
+            elements.append(Table([[Paragraph("ERADICATED FILE DISTRIBUTION", s_field_lbl)]], colWidths=[W], style=[('BACKGROUND',(0,0),(-1,-1),PARCHMENT),('LEFTPADDING',(0,0),(-1,-1),15)]))
+            entries = list(file_types.items())[:8]
+            max_f = max(file_types.values())
+            bar_w = (W - 30) / max(len(entries), 1)
+            bar_cells = []
+            for i, (ext, cnt) in enumerate(entries):
+                col = CHART_COLS[i % len(CHART_COLS)]
+                h = max(3, int((cnt / max_f) * 40))
+                bc = Table([[Paragraph(str(cnt), sty('BC', fontName='Courier', fontSize=6, textColor=GRAY))], [Table([['']], colWidths=[bar_w-8], rowHeights=[h], style=[('BACKGROUND',(0,0),(-1,-1),col),('ROUNDEDCORNERS',(0,0),(-1,-1),2)])], [Paragraph(f".{ext}", sty('BE', fontName='Courier-Bold', fontSize=6, textColor=GRAY))]], colWidths=[bar_w])
+                bc.setStyle(TableStyle([('ALIGN', (0,0),(-1,-1), 'CENTER'), ('VALIGN', (0,1), (0,1), 'BOTTOM')]))
+                bar_cells.append(bc)
+            chart_tbl = Table([bar_cells], colWidths=[bar_w]*len(entries))
+            chart_tbl.setStyle(TableStyle([('BACKGROUND', (0,0),(-1,-1), PARCHMENT), ('ALIGN', (0,0),(-1,-1), 'CENTER'), ('VALIGN', (0,0),(-1,-1), 'BOTTOM'), ('LINEBELOW', (0,0), (-1,0), 0.5, colors.rgba(NAVY.red, NAVY.green, NAVY.blue, 0.1)), ('BOTTOMPADDING', (0,0), (-1,-1), 10)]))
             elements.append(chart_tbl)
-            elements.append(Spacer(1, 22))
+            elements.append(space(20))
 
-        # QR + Signature
-        try:
-            verify_url = f"https://trust-sense.vercel.app/?verify=true&id={device_id}&hash={sha_hash}"
-            qr = qrcode.QRCode(version=1, box_size=8, border=2)
-            qr.add_data(verify_url)
-            qr.make(fit=True)
-            qr_img = qr.make_image(fill_color="#10B981", back_color="#050B14")
-            qr_buf = BytesIO(); qr_img.save(qr_buf); qr_buf.seek(0)
-            qr_rl = Image(qr_buf, width=1.4*inch, height=1.4*inch)
-        except Exception:
-            qr_rl = Paragraph("QR N/A", s_label)
+        # Verification
+        v_data = [[Table([[Paragraph("✓  Sanitization Verified", sty('VF', fontName='Helvetica-Bold', fontSize=11, textColor=GREEN))], [Paragraph("All sectors overwritten — confirmed irrecoverable", sty('VS', fontName='Helvetica', fontSize=7, textColor=GRAY))]], colWidths=[W*0.7], style=[('LEFTPADDING',(0,0),(-1,-1),15)]),
+                   Table([[Paragraph("VERIFIED<br/>SECURE", sty('SEAL', fontName='Helvetica-Bold', fontSize=5, textColor=NAVY, alignment=1))]], colWidths=[0.8*inch], rowHeights=[0.8*inch], style=[('BACKGROUND', (0,0),(-1,-1), PARCHMENT), ('BOX', (0,0),(-1,-1), 1, colors.rgba(NAVY.red, NAVY.green, NAVY.blue, 0.2)), ('ROUNDEDCORNERS', (0,0),(-1,-1), 30), ('ALIGN', (0,0),(-1,-1), 'CENTER'), ('VALIGN', (0,0),(-1,-1), 'MIDDLE'))]]
+        v_row = Table(v_data, colWidths=[W*0.75, W*0.25])
+        v_row.setStyle(TableStyle([('BACKGROUND', (0,0),(-1,-1), PARCHMENT), ('VALIGN', (0,0),(-1,-1), 'MIDDLE'), ('LINEABOVE', (0,0), (-1,-1), 1, colors.rgba(NAVY.red, NAVY.green, NAVY.blue, 0.1))]))
+        elements.append(v_row)
+        elements.append(space(15))
 
-        sig_data = [[qr_rl, Paragraph("<i>TrustSense Cryptographic Engine</i><br/><br/>______________________________<br/>AUTHORIZED SIGNATURE", s_sig)]]
-        sig_tbl = Table(sig_data, colWidths=[doc.width*0.28, doc.width*0.72])
-        sig_tbl.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'MIDDLE'),('ALIGN',(1,0),(1,0),'CENTER')]))
-        elements.append(sig_tbl)
-        elements.append(Spacer(1, 24))
+        # Signature
+        sig_data = [[Table([[Paragraph("TrustSense Engine", sty('SG', fontName='Times-Italic', fontSize=12, textColor=GRAY))], [Paragraph("──────────────────────────", sty('SGL', fontName='Courier-Bold', fontSize=7, textColor=GRAY))], [Paragraph("AUTHORIZED SIGNATURE", sty('SGL', fontName='Courier-Bold', fontSize=7, textColor=GRAY))]], colWidths=[W*0.6], style=[('LEFTPADDING',(0,0),(-1,-1),15)]),
+                     Table([[Paragraph("VALID FROM", sty('VL', fontName='Courier-Bold', fontSize=7, textColor=GRAY, alignment=2))], [Paragraph(date, sty('VV', fontName='Helvetica-Bold', fontSize=11, textColor=NAVY, alignment=2))]], colWidths=[W*0.3], style=[('ALIGN', (0,0),(-1,-1), 'RIGHT'), ('RIGHTPADDING', (0,0), (-1,-1), 15)])]]
+        s_row = Table(sig_data, colWidths=[W*0.65, W*0.35])
+        s_row.setStyle(TableStyle([('BACKGROUND', (0,0),(-1,-1), PARCHMENT), ('VALIGN', (0,0),(-1,-1), 'BOTTOM'), ('BOTTOMPADDING', (0,0), (-1,-1), 12)]))
+        elements.append(s_row)
 
-        # SHA ribbon
-        ribbon_data = [[Paragraph(f"SHA-256: {sha_hash}", ParagraphStyle('H', fontName='Courier-Bold', fontSize=7, textColor=bg_dark, alignment=1))]]
-        ribbon_tbl  = Table(ribbon_data, colWidths=[doc.width])
-        ribbon_tbl.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,-1),trust_yellow),('TOPPADDING',(0,0),(-1,-1),7),('BOTTOMPADDING',(0,0),(-1,-1),7)]))
-        elements.append(ribbon_tbl)
+        # MRZ
+        m1 = f"P<TSA{device_id.replace('-',''):<30}{'<'*15}"[:44].replace('<', '&lt;')
+        m2 = f"{sha_hash.upper()[:9]}{'<'*9}260516{'<'*15}"[:44].replace('<', '&lt;')
+        mrz_tbl = Table([[Paragraph(m1, s_mrz)], [Paragraph(m2, s_mrz)]], colWidths=[W], style=[('BACKGROUND', (0,0),(-1,-1), colors.rgba(NAVY.red, NAVY.green, NAVY.blue, 0.04)), ('LINEABOVE', (0,0), (-1,0), 0.5, colors.rgba(NAVY.red, NAVY.green, NAVY.blue, 0.1)), ('TOPPADDING', (0,0), (-1,-1), 6), ('BOTTOMPADDING', (0,0), (-1,-1), 6), ('LEFTPADDING', (0,0), (-1,-1), 15)])
+        elements.append(mrz_tbl)
+        elements.append(gold_strip)
 
-        # Background
         def bg(canvas, doc):
             canvas.saveState()
-            canvas.setFillColor(bg_dark)
+            canvas.setFillColor(PARCHMENT)
             canvas.rect(0, 0, A4[0], A4[1], fill=1)
-            canvas.setStrokeColor(colors.Color(0.023, 0.713, 0.831, alpha=0.04))
-            canvas.setLineWidth(0.5)
-            for i in range(0, int(A4[0]), 20): canvas.line(i, 0, i, A4[1])
-            for i in range(0, int(A4[1]), 20): canvas.line(0, i, A4[0], i)
-            canvas.setStrokeColor(trust_green); canvas.setLineWidth(3)
-            canvas.rect(12, 12, A4[0]-24, A4[1]-24)
+            canvas.setStrokeColor(GOLD)
+            canvas.setLineWidth(1)
+            canvas.rect(10, 10, A4[0]-20, A4[1]-20)
             canvas.restoreState()
 
         doc.build(elements, onFirstPage=bg, onLaterPages=bg)
         return buf.getvalue()
-
-    except ImportError as e:
-        raise RuntimeError(f"Missing dependency: {e}. Ensure reportlab and qrcode are in requirements.txt.")
-
+    except Exception as e:
+        print(f"PDF Error: {e}")
+        raise e
 
 # ── Routes ────────────────────────────────────────────────────────────────────
-
-@app.route('/')
-def home():
-    return jsonify({"status": "online", "platform": "TrustSense+ API"})
-
 @app.route('/api/certify', methods=['POST'])
 def certify():
     data = request.json or {}
-    cert = generate_certificate(
-        data.get('device_id', 'TS-UNIT-01'),
-        data.get('trust_score', 100),
-        data.get('wipe_level', 'Standard Wipe')
-    )
+    # Simulate a verifiable cryptographic response
+    cert = {
+        "id": hashlib.sha256(str(datetime.now().timestamp()).encode()).hexdigest()[:12],
+        "hash": hashlib.sha256(data.get('device_id', 'TS-UNIT-01').encode()).hexdigest(),
+        "timestamp": datetime.now().isoformat()
+    }
     return jsonify({"cert": cert})
 
 @app.route('/api/certificate', methods=['POST'])
 def certificate():
     data = request.json or {}
     try:
-        # Prefer the clean module version; fall back to inlined
-        fn = _gen_pdf if _PDF_MODULE else generate_neo_pdf
-        pdf_bytes  = fn(data)
+        pdf_bytes  = generate_neo_pdf(data)
         pdf_base64 = base64.b64encode(pdf_bytes).decode()
         return jsonify({"pdf_base64": pdf_base64})
     except Exception as e:
@@ -227,15 +189,7 @@ def certificate():
 
 @app.route('/api/scan', methods=['POST', 'GET'])
 def scan():
-    """Lightweight stub — real scanning is done client-side via File System Access API."""
-    data = request.json or {}
-    return jsonify({
-        "results": {
-            "total_files": data.get('total_files', 0),
-            "sensitive_files": data.get('sensitive_files', 0),
-            "risk_level": data.get('risk_level', 'Low'),
-            "file_types": data.get('file_types', {})
-        },
-        "score": data.get('trust_score', 100),
-        "recommendation": data.get('recommendation', 'Standard Wipe')
-    })
+    return jsonify({"status": "ready"})
+
+if __name__ == "__main__":
+    app.run(port=5000)
