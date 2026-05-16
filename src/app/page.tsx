@@ -365,7 +365,7 @@ export default function TrustSensePage() {
           <div className="inline-block px-4 py-1 bg-trust-cyan/10 border border-trust-cyan/30 rounded-full text-[10px] font-black uppercase tracking-[0.4em] text-trust-cyan mb-6">
             Military Grade Sanitization
           </div>
-          <h1 className="text-6xl md:text-8xl font-black tracking-tighter uppercase animate-glow text-white leading-none">
+          <h1 className="text-6xl md:text-8xl font-black tracking-tighter uppercase text-white leading-none">
             TrustSense<span className="text-trust-cyan">+</span>
           </h1>
           <p className="text-trust-green uppercase tracking-[0.5em] text-xs font-bold mt-4 opacity-70">
@@ -952,107 +952,148 @@ export default function TrustSensePage() {
                 </div>
               )}
 
-              {/* Security Certificate */}
-              <motion.div 
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className="bg-white rounded-2xl max-w-4xl mx-auto overflow-hidden shadow-2xl border border-gray-200"
+              {/* Passport — Navy/Gold Official Style */}
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, type: "spring", stiffness: 80 }}
+                className="max-w-4xl mx-auto"
               >
-                {/* Header */}
-                <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-white">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Shield className="w-8 h-8" />
+                {/* Outer passport cover */}
+                <div className="bg-[#1a2744] rounded-xl shadow-[0_30px_80px_rgba(0,0,0,0.5)] overflow-hidden border border-[#c9a84c]/30">
+
+                  {/* Gold top strip */}
+                  <div className="h-1.5 bg-gradient-to-r from-[#c9a84c] via-[#f5d07a] to-[#c9a84c]" />
+
+                  {/* Header */}
+                  <div className="bg-[#0f1c3a] px-8 py-5 flex items-center justify-between border-b border-[#c9a84c]/20">
+                    <div className="flex items-center gap-4">
+                      {/* Emblem circle */}
+                      <div className="w-12 h-12 rounded-full border-2 border-[#c9a84c]/70 flex items-center justify-center bg-[#c9a84c]/10">
+                        <Shield className="w-6 h-6 text-[#c9a84c]" />
+                      </div>
                       <div>
-                        <div className="text-xl font-bold tracking-wide">Data Sanitization Certificate</div>
-                        <div className="text-[10px] uppercase tracking-widest opacity-80 mt-0.5">TrustSense Forensic Verification Report</div>
+                        <div className="text-[9px] uppercase tracking-[0.35em] text-[#c9a84c]/70 font-bold">Official Document</div>
+                        <div className="text-lg font-black text-white tracking-wider mt-0.5">Data Sanitization Passport</div>
+                        <div className="text-[8px] uppercase tracking-[0.25em] text-[#c9a84c]/50 mt-0.5">TrustSense Forensic Authority</div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-[10px] opacity-70">Certificate ID</div>
-                      <div className="font-mono text-sm font-bold">{cert?.hash?.substring(0, 12)}</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-8 space-y-6 text-gray-800">
-                  {/* Info Grid */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {[
-                      { label: 'Device Node', value: deviceId },
-                      { label: 'Date Issued', value: new Date().toLocaleDateString() },
-                      { label: 'Protocol Used', value: scanResults?.recommendation || 'Standard' },
-                      { label: 'Integrity Score', value: `${wipeResults.after_score}%` },
-                    ].map(item => (
-                      <div key={item.label} className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                        <div className="text-[9px] uppercase tracking-wider text-gray-400 font-bold">{item.label}</div>
-                        <div className="text-sm font-bold text-gray-800 mt-1">{item.value}</div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Stats */}
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center p-4 bg-red-50 rounded-xl border border-red-100">
-                      <div className="text-3xl font-black text-red-500">{scanResults?.results?.sensitive_files || 0}</div>
-                      <div className="text-[9px] uppercase text-red-400 font-bold tracking-wider mt-1">Threats Purged</div>
-                    </div>
-                    <div className="text-center p-4 bg-emerald-50 rounded-xl border border-emerald-100">
-                      <div className="text-3xl font-black text-emerald-600">{scanResults?.results?.total_files || 0}</div>
-                      <div className="text-[9px] uppercase text-emerald-500 font-bold tracking-wider mt-1">Files Processed</div>
-                    </div>
-                    <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-100">
-                      <div className="text-3xl font-black text-blue-600">100%</div>
-                      <div className="text-[9px] uppercase text-blue-400 font-bold tracking-wider mt-1">Verified Clean</div>
+                      <div className="text-[8px] uppercase tracking-widest text-[#c9a84c]/50 font-bold">Document No.</div>
+                      <div className="font-mono text-[#c9a84c] text-sm font-black mt-0.5">{cert?.hash?.substring(0, 12).toUpperCase()}</div>
                     </div>
                   </div>
 
-                  {/* File Type Chart in Passport */}
-                  {scanResults?.results?.file_types && (
-                    <div>
-                      <div className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-3">Eradicated File Distribution</div>
-                      <div className="flex items-end gap-1 h-16 border-b border-gray-200 mb-2">
-                        {(() => {
-                          const entries = Object.entries(scanResults.results.file_types);
-                          const maxC = Math.max(...entries.map(([, c]) => c as number), 1);
-                          const cols = ['bg-emerald-500', 'bg-teal-500', 'bg-cyan-500', 'bg-blue-500', 'bg-indigo-500', 'bg-violet-500', 'bg-amber-500', 'bg-rose-500'];
-                          return entries.slice(0, 8).map(([ext, count], i) => (
-                            <div key={ext} className="flex-1 flex flex-col items-center justify-end h-full" title={`${ext}: ${count}`}>
-                              <div className="text-[7px] text-gray-400 mb-0.5">{count as number}</div>
-                              <div className={`w-full ${cols[i % cols.length]} rounded-t`} style={{ height: `${((count as number) / maxC) * 100}%`, minHeight: 4 }} />
-                            </div>
-                          ));
-                        })()}
-                      </div>
-                      <div className="flex gap-2 justify-center flex-wrap">
-                        {Object.entries(scanResults.results.file_types).slice(0, 8).map(([ext]) => (
-                          <span key={ext} className="text-[8px] text-gray-400 font-bold uppercase">.{ext}</span>
+                  {/* Body */}
+                  <div className="bg-[#f8f5ec] text-gray-800">
+
+                    {/* Guilloché-style accent bar */}
+                    <div className="h-2 bg-gradient-to-r from-[#1a2744] via-[#c9a84c] to-[#1a2744]" />
+
+                    <div className="p-8 space-y-6">
+
+                      {/* Credential fields — passport style */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {[
+                          { label: 'Holder / Node', value: deviceId },
+                          { label: 'Date of Issue', value: new Date().toLocaleDateString('en-GB') },
+                          { label: 'Protocol Applied', value: scanResults?.recommendation || 'Standard' },
+                          { label: 'Integrity Rating', value: `${wipeResults.after_score}%` },
+                        ].map(item => (
+                          <div key={item.label} className="border-b-2 border-[#1a2744]/20 pb-2">
+                            <div className="text-[8px] uppercase tracking-widest text-[#1a2744]/50 font-black">{item.label}</div>
+                            <div className="text-sm font-black text-[#1a2744] mt-1">{item.value}</div>
+                          </div>
                         ))}
                       </div>
-                    </div>
-                  )}
 
-                  {/* Verification */}
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                        <span className="text-sm font-bold text-emerald-600">Sanitization Verified</span>
+                      {/* Stats row */}
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="text-center py-4 border-2 border-red-200 rounded-lg bg-red-50">
+                          <div className="text-3xl font-black text-red-600">{scanResults?.results?.sensitive_files || 0}</div>
+                          <div className="text-[8px] uppercase tracking-wider text-red-400 font-black mt-1">Threats Purged</div>
+                        </div>
+                        <div className="text-center py-4 border-2 border-[#1a2744]/20 rounded-lg bg-[#1a2744]/5">
+                          <div className="text-3xl font-black text-[#1a2744]">{scanResults?.results?.total_files || 0}</div>
+                          <div className="text-[8px] uppercase tracking-wider text-[#1a2744]/50 font-black mt-1">Files Cleared</div>
+                        </div>
+                        <div className="text-center py-4 border-2 border-[#c9a84c]/30 rounded-lg bg-[#c9a84c]/10">
+                          <div className="text-3xl font-black text-[#9a7a2a]">100%</div>
+                          <div className="text-[8px] uppercase tracking-wider text-[#9a7a2a] font-black mt-1">Verified Clean</div>
+                        </div>
                       </div>
-                      <div className="text-[9px] text-gray-400 mt-1">All data sectors overwritten and confirmed irrecoverable</div>
+
+                      {/* Bar chart */}
+                      {scanResults?.results?.file_types && (
+                        <div>
+                          <div className="text-[9px] uppercase tracking-widest text-[#1a2744]/40 font-black mb-3">Eradicated File Distribution</div>
+                          <div className="flex items-end gap-1.5 h-14 border-b border-[#1a2744]/15 mb-2">
+                            {(() => {
+                              const entries = Object.entries(scanResults.results.file_types);
+                              const maxC = Math.max(...entries.map(([, c]) => c as number), 1);
+                              const cols = ['bg-[#1a2744]','bg-[#c9a84c]','bg-red-500','bg-emerald-600','bg-indigo-600','bg-orange-500','bg-teal-600','bg-rose-600'];
+                              return entries.slice(0, 8).map(([ext, count], i) => (
+                                <div key={ext} className="flex-1 flex flex-col items-center justify-end h-full">
+                                  <div className="text-[6px] text-gray-400 mb-0.5">{count as number}</div>
+                                  <div className={`w-full ${cols[i % cols.length]} rounded-t-sm`} style={{ height: `${((count as number)/maxC)*100}%`, minHeight: 3 }} />
+                                </div>
+                              ));
+                            })()}
+                          </div>
+                          <div className="flex gap-3 flex-wrap">
+                            {Object.entries(scanResults.results.file_types).slice(0,8).map(([ext]) => (
+                              <span key={ext} className="text-[7px] uppercase text-[#1a2744]/40 font-black">.{ext}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Verification + Seal */}
+                      <div className="flex items-end justify-between pt-4 border-t-2 border-[#1a2744]/10">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                            <span className="text-sm font-black text-emerald-700">Sanitization Verified</span>
+                          </div>
+                          <div className="text-[8px] text-gray-400 mt-1">All sectors overwritten — confirmed irrecoverable</div>
+                        </div>
+                        {/* Official Seal */}
+                        <div className="relative w-20 h-20 flex-shrink-0">
+                          <svg viewBox="0 0 80 80" className="w-full h-full opacity-30">
+                            <circle cx="40" cy="40" r="36" fill="none" stroke="#1a2744" strokeWidth="2" strokeDasharray="3 2" />
+                            <circle cx="40" cy="40" r="28" fill="none" stroke="#c9a84c" strokeWidth="1.5" />
+                          </svg>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <Lock className="w-5 h-5 text-[#1a2744]/60" />
+                            <span className="text-[5px] font-black uppercase tracking-widest text-[#1a2744]/50 mt-1 text-center leading-tight">VERIFIED<br/>SECURE</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Signature row */}
+                      <div className="flex items-end justify-between">
+                        <div>
+                          <div className="font-mono italic text-[#1a2744]/40 text-base">TrustSense Engine</div>
+                          <div className="w-40 border-t border-[#1a2744]/30 mt-2 pt-1 text-[7px] uppercase tracking-widest text-[#1a2744]/40 font-black">Authorized Signature</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-[8px] uppercase tracking-widest text-[#1a2744]/40 font-black">Valid From</div>
+                          <div className="text-xs font-black text-[#1a2744]/60">{new Date().toLocaleDateString('en-GB')}</div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-mono italic text-gray-400 text-sm">TrustSense Engine</div>
-                      <div className="w-32 border-t border-gray-300 mt-2 pt-1 text-[8px] text-gray-400 uppercase tracking-wider">Authorized Signature</div>
+
+                    {/* Machine-readable zone */}
+                    <div className="bg-[#1a2744]/5 border-t border-[#1a2744]/10 px-8 py-3">
+                      <div className="font-mono text-[7px] text-[#1a2744]/30 tracking-[0.15em] leading-5 break-all">
+                        P&lt;TSA{deviceId.replace(/-/g,'')}&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;<br/>
+                        {cert?.hash?.toUpperCase()}&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Footer */}
-                <div className="bg-gray-50 px-8 py-3 text-[8px] font-mono text-gray-400 border-t border-gray-200 flex justify-between">
-                  <span>SHA-256: {cert?.hash}</span>
-                  <span>TrustSense Forensic Platform</span>
+                  {/* Gold bottom strip */}
+                  <div className="h-1.5 bg-gradient-to-r from-[#c9a84c] via-[#f5d07a] to-[#c9a84c]" />
                 </div>
               </motion.div>
 
