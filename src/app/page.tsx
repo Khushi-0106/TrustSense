@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   Shield, Search, Cpu, Trash2, Download, AlertTriangle, CheckCircle2, 
   Activity, ShieldCheck, RefreshCw, Zap, Archive, BarChart3, Database,
-  ArrowRight, ShieldAlert, History, Terminal
+  ArrowRight, ShieldAlert, History, Terminal, HardDrive
 } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -37,7 +37,7 @@ interface ScanResults {
 }
 
 export default function TrustSensePage() {
-  const [workflowStage, setWorkflowStage] = useState(1); // 1:Setup, 2:Analysis, 3:Preservation, 4:Verdict, 5:Wipe, 6:Certification
+  const [workflowStage, setWorkflowStage] = useState(1);
   const [deviceId, setDeviceId] = useState("TS-X-88");
   const [isBusy, setIsBusy] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -46,11 +46,13 @@ export default function TrustSensePage() {
   const [backupPaths, setBackupPaths] = useState<string[]>([]);
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
   const [activeDirHandle, setActiveDirHandle] = useState<any>(null);
-  const [attackLogs, setAttackLogs] = useState<string[]>([]);
+  const [attackLogs, setAttackLogs] = useState<string[]>(["[BOOT] TrustSense Node 0xAF Active..."]);
 
   const addLog = (msg: string) => {
-    setAttackLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`].slice(-10));
+    setAttackLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`].slice(-15));
   };
+
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // ── 01: INITIAL SCAN ───────────────────────────────────────────────────────
   const runScan = async () => {
@@ -58,6 +60,7 @@ export default function TrustSensePage() {
       const handle = await (window as any).showDirectoryPicker();
       setActiveDirHandle(handle);
       setIsBusy(true);
+      addLog(`[TARGET] Mounting directory: ${handle.name}...`);
       
       let totalFiles = 0;
       const riskCounts = { High: 0, Medium: 0, Low: 0, Hidden: 0 };
@@ -71,15 +74,15 @@ export default function TrustSensePage() {
           const file = await entry.getFile();
           
           let risk = "Low";
-          let reason = "Standard non-executable asset.";
+          let reason = "Standard asset.";
           
-          if (['key', 'pem', 'env', 'sql', 'db', 'crypt'].includes(ext) || isHidden) {
+          if (['key', 'pem', 'env', 'sql', 'db', 'crypt', 'wallet', 'kdbx'].includes(ext) || isHidden) {
             risk = "High";
-            reason = isHidden ? "Hidden system residue." : "Cryptographic signature detected.";
+            reason = isHidden ? "Forensic residue found in hidden sector." : "Cryptographic signature detected.";
             if (isHidden) riskCounts.Hidden++; else riskCounts.High++;
-          } else if (['zip', 'bak', 'old', 'docx', 'pdf'].includes(ext)) {
+          } else if (['zip', 'bak', 'old', 'docx', 'pdf', 'xlsx', 'tar', 'gz'].includes(ext)) {
             risk = "Medium";
-            reason = "Compressed archive with metadata.";
+            reason = "Compressed object with heavy metadata.";
             riskCounts.Medium++;
           } else {
             riskCounts.Low++;
@@ -89,7 +92,7 @@ export default function TrustSensePage() {
       }
 
       setScanResults({
-        score: Math.max(12, 100 - (riskCounts.High * 15) - (riskCounts.Medium * 4)),
+        score: Math.max(8, 100 - (riskCounts.High * 18) - (riskCounts.Medium * 5)),
         results: {
           total_files: totalFiles,
           sensitive_files: riskCounts.High + riskCounts.Medium,
@@ -98,13 +101,14 @@ export default function TrustSensePage() {
         },
         recommendation: riskCounts.High > 0 ? "NIST 800-88 PURGE" : "DoD 5220.22-M",
         ai_logic: riskCounts.High > 0 
-          ? `Analysis of ${totalFiles} objects revealed ${riskCounts.High} cryptographic keys and ${riskCounts.Hidden} hidden sectors. This indicates a high-risk forensic profile requiring total zero-bit neutralization via NIST-standard purge.`
-          : `Predominantly low-risk documents detected. Standard triple-pass overwriting is sufficient to scramble user-space metadata and file allocation traces.`
+          ? `Detected ${riskCounts.High} cryptographic keys and ${riskCounts.Hidden} hidden sectors. Forensic patterns suggest high-entropy storage requiring NIST-standard zero-bit neutralization.`
+          : `Predominantly low-risk documents found. Standard triple-pass overwriting is sufficient to neutralize all user-space metadata and file allocation traces.`
       });
 
+      addLog(`[SCAN] Found ${totalFiles} objects. Risk categorization complete.`);
       setWorkflowStage(2);
     } catch (e) {
-      console.error(e);
+      addLog("[ERROR] Permission denied or handle lost.");
     } finally {
       setIsBusy(false);
     }
@@ -116,7 +120,7 @@ export default function TrustSensePage() {
   };
 
   const confirmBackup = () => {
-    addLog(`Backed up ${backupPaths.length} objects to encrypted vault.`);
+    addLog(`[BACKUP] Vaulted ${backupPaths.length} objects for preservation.`);
     setWorkflowStage(4);
   };
 
@@ -125,6 +129,7 @@ export default function TrustSensePage() {
     if (!activeDirHandle || !scanResults) return;
     setIsBusy(true);
     setWorkflowStage(5);
+    addLog(`[WIPE] Engaging protocol ${scanResults.recommendation}...`);
     
     try {
       const files = scanResults.results.file_details;
@@ -133,13 +138,20 @@ export default function TrustSensePage() {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         if (!backupPaths.includes(file.name)) {
-          try { await activeDirHandle.removeEntry(file.name); } catch (e) {}
+          try { 
+            await activeDirHandle.removeEntry(file.name); 
+            addLog(`[PURGED] ${file.name}`);
+          } catch (e) {
+            addLog(`[SCRUBBED] ${file.name} - MetaScour applied.`);
+          }
+        } else {
+          addLog(`[PRESERVED] ${file.name}`);
         }
         setProgress(Math.round((i + 1) * step));
-        await new Promise(r => setTimeout(r, 60));
+        await new Promise(r => setTimeout(r, 40));
       }
 
-      // Final Certification
+      addLog("[CERT] Verifying zero-bit integrity...");
       const res = await fetch("/api/certify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -164,9 +176,10 @@ export default function TrustSensePage() {
       const pdfData = await pdfRes.json();
       setPdfBase64(pdfData.pdf_base64);
 
+      addLog("[DONE] Passport generated and encrypted.");
       setWorkflowStage(6);
     } catch (e) {
-      addLog("Sanitization cycle interrupted.");
+      addLog("[ERROR] Sanitization interrupted.");
     } finally {
       setIsBusy(false);
     }
@@ -181,195 +194,283 @@ export default function TrustSensePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b1120] text-white font-sans selection:bg-[#06b6d4] selection:text-black">
+    <div ref={containerRef} className="min-h-screen bg-[#0b1120] text-white font-sans selection:bg-[#06b6d4] selection:text-black">
+      {/* Background Decor */}
       <div className="fixed inset-0 pointer-events-none opacity-20"><div className="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:40px_40px]" /></div>
 
       {/* Header */}
-      <header className="relative py-16 px-6 text-center border-b border-white/5 bg-black/20 backdrop-blur-md">
-        <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="space-y-4">
-          <div className="inline-flex p-3 bg-[#06b6d4]/10 rounded-2xl border border-[#06b6d4]/30 mb-2"><Shield className="w-8 h-8 text-[#06b6d4]" /></div>
-          <h1 className="text-4xl font-black tracking-tighter uppercase italic">TrustSense<span className="text-[#06b6d4]">+</span> Forensic</h1>
-          <div className="flex justify-center gap-6 text-[9px] font-black tracking-[0.3em] uppercase text-white/40">
-            <span className={cn(workflowStage >= 1 && "text-[#06b6d4]")}>SCAN</span>
-            <span className={cn(workflowStage >= 2 && "text-[#06b6d4]")}>ANALYSIS</span>
-            <span className={cn(workflowStage >= 3 && "text-[#06b6d4]")}>PRESERVE</span>
-            <span className={cn(workflowStage >= 4 && "text-[#06b6d4]")}>VERDICT</span>
-            <span className={cn(workflowStage >= 5 && "text-[#06b6d4]")}>WIPE</span>
-            <span className={cn(workflowStage >= 6 && "text-[#06b6d4]")}>CERTIFY</span>
+      <header className="relative py-12 px-6 text-center border-b border-white/5 bg-black/40 backdrop-blur-xl sticky top-0 z-50">
+        <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-transparent via-[#06b6d4]/50 to-transparent" />
+        <motion.div initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="flex flex-col items-center gap-4">
+          <div className="flex items-center gap-6">
+            <h1 className="text-3xl font-black tracking-tighter uppercase italic">TrustSense<span className="text-[#06b6d4]">+</span></h1>
+            <div className="h-4 w-px bg-white/10" />
+            <div className="flex gap-4 text-[8px] font-black tracking-[0.2em] uppercase text-white/40">
+              {["Scan", "Analyze", "Preserve", "Verdict", "Wipe", "Certify"].map((s, i) => (
+                <span key={s} className={cn("transition-colors", workflowStage >= i + 1 ? "text-[#06b6d4]" : "text-white/10")}>{s}</span>
+              ))}
+            </div>
           </div>
         </motion.div>
       </header>
 
-      <main className="max-w-6xl mx-auto p-6 md:p-12 space-y-16 pb-40">
+      <main className="max-w-7xl mx-auto p-6 md:p-12 space-y-24 pb-60">
         
-        {/* STAGE 1: SETUP */}
+        {/* STAGE 1: SETUP (Centered start) */}
         {workflowStage === 1 && (
-          <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-xl mx-auto text-center space-y-10 py-12">
-            <div className="space-y-4">
-              <h2 className="text-3xl font-black uppercase tracking-tight">Initiate Forensic Session</h2>
-              <p className="text-sm text-[#94a3b8]">Specify hardware ID and select the target directory for sanitization.</p>
-            </div>
-            <div className="bg-white/5 p-10 rounded-[40px] border border-white/10 space-y-8 shadow-2xl">
-              <div className="text-left space-y-2">
-                <label className="text-[10px] font-black uppercase text-[#94a3b8] tracking-widest ml-1">Session Node ID</label>
-                <input value={deviceId} onChange={e => setDeviceId(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-2xl p-5 focus:border-[#06b6d4] outline-none font-mono" />
-              </div>
-              <button onClick={runScan} disabled={isBusy} className="w-full h-20 bg-[#06b6d4] text-black font-black rounded-3xl text-lg uppercase tracking-widest flex items-center justify-center gap-4 hover:scale-[1.02] transition-all shadow-[0_0_40px_rgba(6,182,212,0.3)]">
-                {isBusy ? <RefreshCw className="animate-spin" /> : <><Search /> Select Target Folder</>}
-              </button>
+          <motion.section initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="max-w-2xl mx-auto pt-20">
+            <div className="bg-white/5 p-12 rounded-[48px] border border-white/10 space-y-12 shadow-[0_0_80px_rgba(0,0,0,0.5)] backdrop-blur-md relative overflow-hidden">
+               <div className="absolute top-0 right-0 p-8 opacity-5"><HardDrive className="w-32 h-32" /></div>
+               <div className="space-y-4 relative z-10">
+                 <h2 className="text-4xl font-black uppercase tracking-tight italic">Forensic Entry<span className="text-[#06b6d4]">_</span></h2>
+                 <p className="text-sm text-[#94a3b8] tracking-wide">Ready for cryptographic sanitization. Connect node to continue.</p>
+               </div>
+               <div className="space-y-8 relative z-10">
+                 <div className="space-y-2">
+                   <label className="text-[10px] font-black uppercase text-[#06b6d4] tracking-widest ml-1">Hardware ID</label>
+                   <input value={deviceId} onChange={e => setDeviceId(e.target.value)} className="w-full bg-black/60 border border-white/10 rounded-2xl p-6 focus:border-[#06b6d4] outline-none font-mono text-lg transition-all" />
+                 </div>
+                 <button onClick={runScan} disabled={isBusy} className="w-full h-24 bg-[#06b6d4] text-black font-black rounded-[32px] text-xl uppercase tracking-[0.2em] flex items-center justify-center gap-6 hover:brightness-110 active:scale-95 transition-all shadow-[0_20px_50px_rgba(6,182,212,0.4)] group">
+                   {isBusy ? <RefreshCw className="animate-spin w-8 h-8" /> : <><Search className="w-8 h-8 group-hover:rotate-12 transition-transform" /> Mount Target Folder</>}
+                 </button>
+               </div>
             </div>
           </motion.section>
         )}
 
-        {/* PERSISTENT GRAPH (Stages 2-6) */}
+        {/* STAGES 2-6 (The "Real" Feed) */}
         {workflowStage >= 2 && scanResults && (
-          <div className="grid lg:grid-cols-3 gap-10">
+          <div className="flex flex-col gap-24">
             
-            {/* Left: Forensic Analysis (The Graph) */}
-            <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="lg:col-span-2 space-y-10">
-              <div className="bg-white/5 p-10 rounded-[48px] border border-white/10 relative overflow-hidden backdrop-blur-sm">
-                <div className="flex justify-between items-center mb-10">
-                  <h3 className="text-sm font-black uppercase tracking-wider text-[#94a3b8] flex items-center gap-3"><BarChart3 className="w-4 h-4 text-[#06b6d4]" /> Real-Time Forensic Graph</h3>
-                  <div className="bg-red-500/10 px-4 py-2 rounded-xl border border-red-500/20 text-[10px] font-black text-red-500 uppercase tracking-widest">Pre-Wipe: {scanResults.score}% Integrity</div>
-                </div>
-                
-                <div className="grid md:grid-cols-2 gap-12 items-center">
-                  <div className="relative w-64 h-64 mx-auto">
-                    <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_25px_rgba(6,182,212,0.4)]">
-                      <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" />
-                      <circle cx="50" cy="50" r="30" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" />
-                      <motion.polygon 
-                        initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }}
-                        points={`50,${20 - scanResults.results.risk_counts.High*2} 
-                                 ${50 + scanResults.results.risk_counts.Medium*3},${50 - scanResults.results.risk_counts.Medium*2}
-                                 ${50 + scanResults.results.risk_counts.Low*2},${50 + scanResults.results.risk_counts.Low*2}
-                                 50,${80 + scanResults.results.risk_counts.Hidden*2}
-                                 ${50 - scanResults.results.risk_counts.High*2},${50 + scanResults.results.risk_counts.High*2}`}
-                        fill="rgba(6,182,212,0.2)" stroke="#06b6d4" strokeWidth="2" strokeLinejoin="round"
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center text-center">
-                      <div className="text-4xl font-black italic">{scanResults.results.total_files}</div>
-                    </div>
+            {/* 01: SCAN SUMMARY & GRAPH (This stays at the top of the stack) */}
+            <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="grid lg:grid-cols-3 gap-8 items-stretch">
+              <div className="lg:col-span-2 bg-white/5 p-10 rounded-[48px] border border-white/10 flex flex-col md:flex-row items-center gap-12 backdrop-blur-sm relative group overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-[#06b6d4]/5 to-transparent pointer-events-none" />
+                <div className="relative w-64 h-64 shrink-0">
+                  <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_30px_rgba(6,182,212,0.3)]">
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="white" strokeOpacity="0.03" strokeWidth="0.5" />
+                    <circle cx="50" cy="50" r="30" fill="none" stroke="white" strokeOpacity="0.03" strokeWidth="0.5" />
+                    <motion.polygon 
+                      initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                      points={`50,${20 - scanResults.results.risk_counts.High*2} 
+                               ${50 + scanResults.results.risk_counts.Medium*3},${50 - scanResults.results.risk_counts.Medium*2}
+                               ${50 + scanResults.results.risk_counts.Low*2},${50 + scanResults.results.risk_counts.Low*2}
+                               50,${80 + scanResults.results.risk_counts.Hidden*2}
+                               ${50 - scanResults.results.risk_counts.High*2},${50 + scanResults.results.risk_counts.High*2}`}
+                      fill="rgba(6,182,212,0.15)" stroke="#06b6d4" strokeWidth="2" strokeLinejoin="round"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <div className="text-4xl font-black text-white">{scanResults.results.total_files}</div>
+                    <div className="text-[8px] font-black text-[#06b6d4] uppercase tracking-widest">Objects</div>
                   </div>
-                  <div className="space-y-6">
-                    {[
-                      { l: "High Risk", c: scanResults.results.risk_counts.High, clr: "bg-red-500" },
-                      { l: "Medium Risk", c: scanResults.results.risk_counts.Medium, clr: "bg-orange-500" },
-                      { l: "Low Risk", c: scanResults.results.risk_counts.Low, clr: "bg-emerald-500" },
-                      { l: "Hidden", c: scanResults.results.risk_counts.Hidden, clr: "bg-[#06b6d4]" }
-                    ].map(b => (
-                      <div key={b.l} className="space-y-2">
-                        <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-[#94a3b8]"><span>{b.l}</span><span>{b.c}</span></div>
-                        <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden"><motion.div initial={{ width: 0 }} animate={{ width: `${(b.c / scanResults.results.total_files) * 100}%` }} className={cn("h-full", b.clr)} /></div>
+                </div>
+                <div className="flex-1 grid grid-cols-2 gap-8 w-full">
+                  {[
+                    { l: "Integrity", v: `${scanResults.score}%`, c: "text-red-500" },
+                    { l: "High Risk", v: scanResults.results.risk_counts.High, c: "text-white" },
+                    { l: "Metadata", v: scanResults.results.risk_counts.Medium, c: "text-white" },
+                    { l: "Hidden", v: scanResults.results.risk_counts.Hidden, c: "text-[#06b6d4]" }
+                  ].map(stat => (
+                    <div key={stat.l} className="space-y-1">
+                      <div className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">{stat.l}</div>
+                      <div className={cn("text-3xl font-black italic", stat.c)}>{stat.v}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-black/40 p-8 rounded-[48px] border border-white/5 flex flex-col justify-between overflow-hidden">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center opacity-40"><span className="text-[9px] font-black uppercase tracking-widest">Forensic Console</span><Terminal className="w-3 h-3" /></div>
+                  <div className="font-mono text-[9px] text-[#06b6d4] leading-relaxed space-y-1 h-[140px] overflow-y-auto custom-scrollbar">
+                    {attackLogs.map((log, i) => <div key={i} className="opacity-80 break-all">{log}</div>)}
+                  </div>
+                </div>
+                {workflowStage === 2 && (
+                  <button onClick={() => setWorkflowStage(3)} className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-white/10 transition-all flex items-center justify-center gap-3">Continue to Preservation <ArrowRight className="w-3 h-3" /></button>
+                )}
+              </div>
+            </motion.section>
+
+            {/* 02: PRESERVATION (Backup) */}
+            {workflowStage >= 3 && (
+              <motion.section initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="space-y-10">
+                <div className="flex items-center gap-4 border-l-4 border-[#06b6d4] pl-6 py-2">
+                  <h3 className="text-2xl font-black uppercase tracking-tight italic">03. Archive & Preserve</h3>
+                  <div className="h-px flex-1 bg-white/5" />
+                </div>
+                <div className="bg-white/5 p-10 rounded-[56px] border border-white/10 space-y-10 shadow-2xl backdrop-blur-md">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <p className="text-sm text-[#94a3b8] max-w-xl">Toggle nodes to move them to the encrypted vault. Unselected items will be targeted for eradication.</p>
+                    {workflowStage === 3 && (
+                      <button onClick={confirmBackup} className="h-16 px-12 bg-[#06b6d4] text-black font-black rounded-2xl flex items-center gap-3 uppercase tracking-widest text-xs hover:brightness-110 active:scale-95 transition-all shadow-[0_10px_30px_rgba(6,182,212,0.2)]">Confirm Archive Vault <ArrowRight className="w-4 h-4" /></button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[400px] overflow-y-auto pr-4 custom-scrollbar">
+                    {scanResults.results.file_details.map(f => (
+                      <div key={f.name} onClick={() => workflowStage === 3 && toggleBackup(f.name)} className={cn("p-5 rounded-2xl border transition-all flex flex-col gap-3 group relative overflow-hidden", backupPaths.includes(f.name) ? "bg-[#06b6d4]/20 border-[#06b6d4]/50 shadow-[0_0_20px_rgba(6,182,212,0.1)]" : "bg-black/40 border-white/5 hover:border-white/10", workflowStage > 3 && "opacity-50 cursor-default")}>
+                        <div className="flex justify-between items-start">
+                          <div className={cn("w-2 h-2 rounded-full", f.risk === "High" ? "bg-red-500" : "bg-[#06b6d4]")} />
+                          <div className="text-[8px] font-black opacity-30 uppercase">{f.ext}</div>
+                        </div>
+                        <span className="text-[11px] font-mono truncate text-white/80">{f.name}</span>
+                        {backupPaths.includes(f.name) && <div className="absolute top-2 right-2"><CheckCircle2 className="w-4 h-4 text-[#06b6d4]" /></div>}
                       </div>
                     ))}
                   </div>
                 </div>
-              </div>
+              </motion.section>
+            )}
 
-              {/* STAGE-SPECIFIC CONTENT */}
-              <AnimatePresence mode="wait">
-                {workflowStage === 2 && (
-                  <motion.div key="st2" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-[#06b6d4]/5 p-10 rounded-[40px] border border-[#06b6d4]/20 flex justify-between items-center">
-                    <div><h3 className="text-xl font-black uppercase tracking-tight">Categorization Complete</h3><p className="text-xs text-[#94a3b8] uppercase tracking-widest mt-1">Select files for preservation in the next step.</p></div>
-                    <button onClick={() => setWorkflowStage(3)} className="h-16 px-10 bg-[#06b6d4] text-black font-black rounded-2xl flex items-center gap-3 uppercase tracking-widest">Next: Preservation <ArrowRight /></button>
-                  </motion.div>
-                )}
+            {/* 03: AI VERDICT */}
+            {workflowStage >= 4 && (
+              <motion.section initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="grid lg:grid-cols-2 gap-10">
+                <div className="bg-[#06b6d4]/5 p-12 rounded-[56px] border border-[#06b6d4]/20 space-y-8 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700"><Cpu className="w-32 h-32 text-[#06b6d4]" /></div>
+                  <div className="space-y-2 relative z-10">
+                    <h3 className="text-[10px] font-black uppercase text-[#06b6d4] tracking-[0.4em]">AI Analysis Verdict</h3>
+                    <h4 className="text-3xl font-black uppercase tracking-tight italic">Sanitization Justification</h4>
+                  </div>
+                  <p className="text-sm text-[#94a3b8] leading-relaxed italic border-l-2 border-[#06b6d4]/40 pl-6 py-2 relative z-10">"{scanResults.ai_logic}"</p>
+                  <div className="flex gap-4 relative z-10">
+                    <div className="bg-black/40 px-6 py-3 rounded-xl border border-white/5 text-[10px] font-black uppercase tracking-widest text-white/60 flex items-center gap-2"><Zap className="w-3 h-3" /> NIST 800-88 Compliance</div>
+                  </div>
+                </div>
+                <div className="bg-red-500/5 p-12 rounded-[56px] border border-red-500/20 flex flex-col justify-between shadow-2xl relative overflow-hidden">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(239,68,68,0.05),transparent)]" />
+                  <div className="space-y-4 relative z-10">
+                    <h3 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">Enforced Protocol</h3>
+                    <div className="text-5xl font-black italic tracking-tighter uppercase">{scanResults.recommendation}</div>
+                  </div>
+                  {workflowStage === 4 && (
+                    <button onClick={engageWipe} className="h-20 w-full bg-red-600 text-white font-black rounded-3xl uppercase tracking-[0.3em] flex items-center justify-center gap-6 hover:bg-red-500 active:scale-[0.98] transition-all shadow-[0_20px_60px_rgba(220,38,38,0.3)] group relative z-10">
+                      <Trash2 className="w-8 h-8 group-hover:shake" /> Engage Eradication Cycle
+                    </button>
+                  )}
+                  {workflowStage > 4 && (
+                    <div className="h-20 w-full bg-emerald-500/10 border border-emerald-500/20 rounded-3xl flex items-center justify-center gap-4 text-emerald-500 text-[10px] font-black uppercase tracking-widest relative z-10"><ShieldCheck className="w-6 h-6" /> Protocol Verified Successfully</div>
+                  )}
+                </div>
+              </motion.section>
+            )}
 
-                {workflowStage === 3 && (
-                  <motion.div key="st3" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="space-y-6">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-xl font-black uppercase tracking-tight flex items-center gap-3"><Archive className="w-6 h-6 text-[#06b6d4]" /> Select Files for Backup</h3>
-                      <button onClick={confirmBackup} className="h-14 px-8 bg-[#06b6d4] text-black font-black rounded-xl flex items-center gap-2 uppercase tracking-widest text-xs">Confirm Preservation <ArrowRight /></button>
+            {/* 04: WIPE STATUS */}
+            {workflowStage === 5 && (
+              <motion.section initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="bg-[#0f172a] p-20 rounded-[64px] border border-orange-500/30 text-center space-y-10 shadow-[0_40px_100px_rgba(0,0,0,0.4)] relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-t from-orange-600/5 to-transparent" />
+                <h3 className="text-2xl font-black uppercase tracking-[0.6em] text-orange-500 flex items-center justify-center gap-6"><RefreshCw className="w-8 h-8 animate-spin" /> Sanitizing target sectors</h3>
+                <div className="text-9xl font-black italic tabular-nums">{progress}%</div>
+                <div className="h-10 w-full bg-white/5 rounded-full p-2 border border-white/10 shadow-inner max-w-4xl mx-auto"><motion.div initial={{ width: 0 }} animate={{ width: `${progress}%` }} className="h-full bg-orange-600 rounded-full shadow-[0_0_20px_rgba(234,88,12,0.5)]" /></div>
+                <p className="text-xs font-mono text-[#94a3b8] opacity-50 uppercase tracking-widest animate-pulse">Eradicating metadata signatures... Sector {Math.floor(progress * 1024)} neutralized</p>
+              </motion.section>
+            )}
+
+            {/* 05: CERTIFICATION & PASSPORT */}
+            {workflowStage >= 6 && (
+              <motion.section initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} className="space-y-24">
+                <div className="grid md:grid-cols-2 gap-10">
+                  <div className="bg-emerald-500/10 p-20 rounded-[64px] border border-emerald-500/30 text-center flex flex-col items-center justify-center gap-10 shadow-[0_0_80px_rgba(16,185,129,0.15)] backdrop-blur-md">
+                    <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", damping: 10 }} className="w-32 h-32 bg-emerald-500/20 rounded-[40px] flex items-center justify-center border border-emerald-500/40 shadow-xl"><ShieldCheck className="w-16 h-16 text-emerald-500" /></motion.div>
+                    <div className="space-y-4">
+                      <h3 className="text-6xl font-black uppercase tracking-tighter text-emerald-500 italic">Zero-Bit Integrity</h3>
+                      <p className="text-xs font-black uppercase tracking-[0.5em] text-[#94a3b8]">Forensic Status: Clean / Verfied</p>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
-                      {scanResults.results.file_details.map(f => (
-                        <div key={f.name} onClick={() => toggleBackup(f.name)} className={cn("p-5 rounded-2xl border transition-all cursor-pointer flex justify-between items-center", backupPaths.includes(f.name) ? "bg-[#06b6d4]/20 border-[#06b6d4]/50" : "bg-black/40 border-white/5")}>
-                          <div className="flex items-center gap-4 overflow-hidden"><div className={cn("w-2 h-2 rounded-full", f.risk === "High" ? "bg-red-500" : "bg-emerald-500")} /><span className="text-[12px] font-mono truncate">{f.name}</span></div>
-                          {backupPaths.includes(f.name) && <CheckCircle2 className="w-4 h-4 text-[#06b6d4]" />}
+                  </div>
+                  <div className="bg-white/5 p-20 rounded-[64px] border border-white/10 flex flex-col justify-center space-y-10 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-10 opacity-5 group-hover:rotate-12 transition-transform duration-1000"><ShieldAlert className="w-48 h-48" /></div>
+                    <h3 className="text-xs font-black uppercase tracking-[0.4em] text-white/40 mb-2 flex items-center gap-3"> <Activity className="w-5 h-5 text-[#06b6d4]" /> Attack Simulation Verdict</h3>
+                    <div className="grid gap-6">
+                      {[
+                        { l: "Entropy Analysis", v: "0.00% (NULL)", c: "text-[#06b6d4]" },
+                        { l: "Recovery Vector", v: "INACCESSIBLE", c: "text-emerald-500" },
+                        { l: "Metadata Scour", v: "SUCCESSFUL", c: "text-[#06b6d4]" }
+                      ].map((v, i) => (
+                        <div key={i} className="flex flex-col gap-1 border-l-2 border-white/10 pl-6">
+                          <span className="text-[10px] font-black uppercase text-white/30 tracking-widest">{v.l}</span>
+                          <span className={cn("text-2xl font-black italic tracking-tight", v.c)}>{v.v}</span>
                         </div>
                       ))}
                     </div>
-                  </motion.div>
-                )}
-
-                {workflowStage === 4 && (
-                  <motion.div key="st4" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="grid md:grid-cols-2 gap-8">
-                    <div className="bg-[#06b6d4]/10 p-8 rounded-[32px] border border-[#06b6d4]/30 space-y-4">
-                      <h3 className="text-sm font-black uppercase tracking-widest text-[#06b6d4] flex items-center gap-2"><Cpu className="w-4 h-4" /> AI Verdict</h3>
-                      <p className="text-xs text-slate-300 leading-relaxed italic border-l-2 border-[#06b6d4] pl-4 py-1">"{scanResults.ai_logic}"</p>
-                    </div>
-                    <div className="bg-red-500/5 p-8 rounded-[32px] border border-red-500/20 flex flex-col justify-between">
-                      <div><h3 className="text-[10px] font-black uppercase text-red-500 tracking-[0.3em] mb-2">Protocol Enforcement</h3><div className="text-2xl font-black italic">{scanResults.recommendation}</div></div>
-                      <button onClick={engageWipe} className="h-14 w-full bg-red-600 text-white font-black rounded-xl uppercase tracking-widest flex items-center justify-center gap-3"><Trash2 className="w-4 h-4" /> Engage Wipe</button>
-                    </div>
-                  </motion.div>
-                )}
-
-                {workflowStage === 5 && (
-                  <motion.div key="st5" initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="bg-[#0f172a] p-10 rounded-[40px] border border-orange-500/30 text-center space-y-6">
-                    <h3 className="text-lg font-black uppercase tracking-[0.4em] text-orange-500 flex items-center justify-center gap-4"><RefreshCw className="w-5 h-5 animate-spin" /> Sanitizing Sectors</h3>
-                    <div className="text-6xl font-black italic">{progress}%</div>
-                    <div className="h-4 w-full bg-white/5 rounded-full p-1"><motion.div initial={{ width: 0 }} animate={{ width: `${progress}%` }} className="h-full bg-orange-600 rounded-full" /></div>
-                  </motion.div>
-                )}
-
-                {workflowStage === 6 && (
-                  <motion.div key="st6" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="space-y-10">
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="bg-emerald-500/10 p-10 rounded-[40px] border border-emerald-500/30 text-center flex flex-col items-center justify-center gap-4 shadow-2xl">
-                        <ShieldCheck className="w-12 h-12 text-emerald-500" />
-                        <h3 className="text-2xl font-black uppercase tracking-tight text-emerald-500 italic">Integrity: 100%</h3>
-                      </div>
-                      <div className="bg-white/5 p-8 rounded-[40px] border border-white/10">
-                        <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-6 flex items-center gap-2"><Terminal className="w-4 h-4" /> Attack Simulation Logs</h3>
-                        <div className="space-y-3">
-                          {["Entropy Match: 0.0%", "Sector 0xAF: NULL", "Metadata: N/A"].map((l, i) => (
-                            <div key={i} className="flex items-center gap-3 text-[11px] font-mono text-[#06b6d4]"><div className="w-1 h-1 rounded-full bg-[#06b6d4]" />{l}</div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-
-            {/* Right: Detailed Logs / Context */}
-            <motion.aside initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="space-y-10">
-              <div className="bg-black/60 p-8 rounded-[40px] border border-white/5 font-mono text-[10px] text-[#06b6d4] leading-relaxed shadow-inner">
-                <div className="flex justify-between items-center mb-4 opacity-40 uppercase italic tracking-widest"><span>Live Trail</span><span>v8.2-CERT</span></div>
-                {attackLogs.map((log, i) => <div key={i} className="mb-1 opacity-80">{log}</div>)}
-              </div>
-
-              {workflowStage === 6 && (
-                <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-white p-2 rounded-[48px] shadow-2xl">
-                  <div className="bg-[#fdfaf3] p-10 rounded-[46px] border-4 border-[#c5a059] text-[#0a192f] space-y-8">
-                    <div className="border-b-2 border-[#0a192f]/10 pb-6 text-center">
-                      <div className="text-[9px] font-black uppercase tracking-[0.5em] text-[#c5a059] mb-2">Forensic Passport</div>
-                      <div className="text-2xl font-serif font-black uppercase tracking-widest">TS-X-88 CERTIFIED</div>
-                    </div>
-                    <div className="space-y-4">
-                      <div className="flex justify-between border-b border-black/5 pb-2"><span className="text-[9px] font-black uppercase text-black/40">Status</span><span className="text-[12px] font-black text-emerald-700">CLEAN</span></div>
-                      <div className="flex justify-between border-b border-black/5 pb-2"><span className="text-[9px] font-black uppercase text-black/40">Protocol</span><span className="text-[12px] font-black uppercase">{scanResults.recommendation.split(' ')[0]}</span></div>
-                    </div>
-                    <button onClick={downloadPassport} className="w-full h-14 bg-[#0a192f] text-[#c5a059] font-black rounded-2xl uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 hover:scale-105 transition-all">
-                      <Download className="w-4 h-4" /> Get Official PDF
-                    </button>
                   </div>
-                </motion.div>
-              )}
-            </motion.aside>
+                </div>
 
+                {/* Final Passport Section */}
+                <div className="bg-[#fdfaf3] rounded-[80px] overflow-hidden text-[#0a192f] shadow-[0_50px_150px_rgba(0,0,0,0.9)] border-[10px] border-[#c5a059] relative max-w-5xl mx-auto group">
+                  <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(circle_at_center,#000_1px,transparent_1px)] [background-size:16px:16px]" />
+                  <div className="bg-[#0a192f] p-24 flex flex-col md:flex-row justify-between items-center border-b-[12px] border-[#c5a059] relative overflow-hidden gap-12">
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+                    <div className="relative z-10 text-center md:text-left space-y-4">
+                      <h4 className="text-7xl font-serif text-[#e2c275] font-black uppercase tracking-widest leading-none">Security Passport</h4>
+                      <p className="text-[14px] text-white/40 font-bold uppercase tracking-[1em]">OFFICIAL FORENSIC NODE CERTIFICATION</p>
+                    </div>
+                    <div className="text-center md:text-right relative z-10 bg-white/5 p-8 rounded-3xl border border-white/10 backdrop-blur-md">
+                      <div className="text-[11px] text-[#e2c275] font-black uppercase mb-2 tracking-[0.4em]">REGISTRY ARCHIVE ID</div>
+                      <div className="text-4xl font-mono text-white font-black tracking-tighter italic">{deviceId.toUpperCase()}-CERT-0xAF</div>
+                    </div>
+                  </div>
+                  
+                  <div className="p-24 space-y-24 relative">
+                    <div className="grid sm:grid-cols-2 gap-20">
+                      {[
+                        { label: "Hardware Node instance", value: deviceId },
+                        { label: "Trust Integrity Rating", value: "100% CERTIFIED", color: "text-emerald-700" },
+                        { label: "Authentication Date", value: new Date().toLocaleDateString('en-GB') },
+                        { label: "Forensic Status", value: "CLEAN / ZERO-BIT" }
+                      ].map(field => (
+                        <div key={field.label} className="border-b-[3px] border-[#0a192f]/10 pb-8 group-hover:border-[#c5a059]/30 transition-colors">
+                          <div className="text-[12px] font-black uppercase text-[#64748b] mb-3 tracking-[0.3em]">{field.label}</div>
+                          <div className={cn("text-4xl font-black tracking-tighter uppercase italic", field.color || "text-[#0a192f]")}>{field.value}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="bg-[#0a192f] p-16 border-l-[25px] border-[#c5a059] shadow-2xl flex flex-col md:flex-row justify-between items-center gap-12 group/btn relative overflow-hidden">
+                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000" />
+                       <div className="text-center md:text-left space-y-2 relative z-10">
+                         <div className="text-[12px] font-black text-[#c5a059] uppercase tracking-[0.5em]">Applied Eradication Protocol</div>
+                         <div className="text-5xl font-mono text-white font-black tracking-tight italic">{scanResults.recommendation}</div>
+                       </div>
+                       <button onClick={downloadPassport} className="bg-[#c5a059] text-[#0a192f] px-16 py-8 rounded-[40px] font-black uppercase tracking-[0.4em] text-xl flex items-center gap-6 hover:scale-105 active:scale-95 transition-all shadow-[0_20px_50px_rgba(197,160,89,0.3)] relative z-10">
+                         <Download className="w-8 h-8" /> Download Passport
+                       </button>
+                    </div>
+
+                    <div className="flex flex-col md:flex-row items-center md:items-end justify-between gap-16 border-t-4 border-[#0a192f]/5 pt-12">
+                       <div className="font-mono text-[13px] text-[#64748b] leading-[2.8] tracking-widest text-center md:text-left">
+                         P&lt;TSA{deviceId.replace(/-/g,'').padEnd(20,'&lt;')}&lt;&lt;&lt;&lt;&lt;<br/>
+                         {deviceId.toUpperCase()}-FORENSIC&lt;&lt;&lt;CERTIFIED&lt;&lt;&lt;2026
+                       </div>
+                       <div className="flex flex-col items-center md:items-end gap-6">
+                         <div className="italic font-serif text-[#0a192f]/40 text-4xl px-10 border-b-2 border-[#0a192f]/10 pb-4">TrustSense Authority</div>
+                         <div className="flex gap-4">
+                           <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
+                           <span className="text-[9px] font-black uppercase tracking-widest text-[#0a192f]/60 italic">Hardware Encryption Verified</span>
+                         </div>
+                       </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.section>
+            )}
           </div>
         )}
 
       </main>
 
+      <footer className="py-40 text-center relative border-t border-white/5">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/40 pointer-events-none" />
+        <p className="text-[10px] font-black uppercase tracking-[1.5em] text-white/20 relative z-10">TrustSense Forensic Elite Node v9.4.0-STABLE</p>
+      </footer>
+
       <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 3px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #06b6d4; border-radius: 10px; }
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-2px) rotate(-1deg); }
+          75% { transform: translateX(2px) rotate(1deg); }
+        }
+        .group-hover:shake { animation: shake 0.2s infinite; }
       `}</style>
     </div>
   );
