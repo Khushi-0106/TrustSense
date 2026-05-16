@@ -32,17 +32,18 @@ def scan_data(path):
     total_files = 0
     total_folders = 0
     max_depth = 0
-    file_types = defaultdict(int)
-    files_list = []
+    file_details = []
 
     if not os.path.exists(path):
         return {
             "total_files": 0, "total_folders": 0, "hidden_files": 0, "temp_files": 0,
             "sensitive_files": 0, "max_depth": 0, "file_types": {},
-            "risk_level": "Low", "files": []
+            "risk_level": "Low", "files": [], "file_details": [],
+            "risk_counts": {"High": 0, "Medium": 0, "Low": 0, "Hidden": 0}
         }
 
     base_depth = path.rstrip(os.path.sep).count(os.path.sep)
+    risk_counts = {"High": 0, "Medium": 0, "Low": 0, "Hidden": 0}
 
     for root, dirs, files in os.walk(path):
         total_folders += len(dirs)
@@ -53,76 +54,70 @@ def scan_data(path):
         for file in files:
             total_files += 1
             full_path = os.path.join(root, file)
-            clean_name = file
-            files_list.append(clean_name)
-
             ext = os.path.splitext(file)[1].lower()
-            if ext:
-                file_types[ext] += 1
-            else:
-                file_types["No Extension"] += 1
+            
+            if ext: file_types[ext] += 1
+            else: file_types["No Extension"] += 1
 
-            # Enhanced Hidden File Detection (Cross-Platform)
-            is_hidden = False
-            if file.startswith('.'):
-                is_hidden = True
-            elif os.name == 'nt':
+            # ── Hidden Detection ──
+            is_hidden = file.startswith('.')
+            if not is_hidden and os.name == 'nt':
                 try:
                     attrs = ctypes.windll.kernel32.GetFileAttributesW(full_path)
-                    is_hidden = bool(attrs & 2) # FILE_ATTRIBUTE_HIDDEN = 2
-                except:
-                    pass
+                    is_hidden = bool(attrs & 2)
+                except: pass
             
-            if is_hidden:
+            if is_hidden: 
                 hidden += 1
+                risk_counts["Hidden"] += 1
 
-            # Enhanced Temporary File Detection
-            temp_exts = ['.tmp', '.log', '.bak', '.swp', '.temp', '.old', '.cache', '.thumbs', '.db']
-            is_temp = False
-            if ext in temp_exts:
-                is_temp = True
-            elif 'temp' in root.lower() or 'tmp' in root.lower():
-                is_temp = True
+            # ── Sensitivity Detection ──
+            risk_score = 0 # 0=Low, 1=Medium, 2+=High
             
-            if is_temp:
-                temp += 1
-
-            # NEW: Content-based sensitivity detection
-            is_sensitive = False
+            # Extension matches
+            if ext in ['.key', '.pem', '.env', '.config', '.bak', '.old']:
+                risk_score += 2
+            elif ext in ['.txt', '.pdf', '.docx', '.json', '.yaml', '.sh', '.bat', '.ps1']:
+                risk_score += 1
             
-            # Check by extension first (legacy but still useful for speed)
-            if ext in ['.key', '.pem', '.env', '.config']:
-                is_sensitive = True
-            
-            # Deep content scan for text/code files
-            if not is_sensitive and ext in ['.txt', '.pdf', '.docx', '.csv', '.xlsx', '.json', '.yaml', '.py', '.js', '.sh', '.bat']:
+            # Content match
+            if ext in ['.txt', '.json', '.py', '.js', '.sh', '.bat', '.ps1']:
                 if is_content_sensitive(full_path):
-                    is_sensitive = True
-            
-            if is_sensitive:
-                sensitive += 1
-                
-            # High risk executable/script types (still flagged by type as well)
-            if ext in ['.exe', '.sh', '.bat', '.ps1']:
-                sensitive += 1 # extra weight
+                    risk_score += 2
 
-    if sensitive > 10:
-        risk = "Critical"
-    elif sensitive > 5:
-        risk = "High"
-    elif sensitive > 1:
-        risk = "Medium"
-    else:
-        risk = "Low"
+            # Categorization
+            if risk_score >= 2:
+                risk_label = "High"
+                sensitive += 1
+                risk_counts["High"] += 1
+            elif risk_score == 1:
+                risk_label = "Medium"
+                risk_counts["Medium"] += 1
+            else:
+                risk_label = "Low"
+                risk_counts["Low"] += 1
+            
+            file_details.append({
+                "name": file,
+                "path": full_path,
+                "risk": risk_label,
+                "hidden": is_hidden,
+                "size": os.path.getsize(full_path)
+            })
+
+    if risk_counts["High"] > 5: risk = "Critical"
+    elif risk_counts["High"] > 0: risk = "High"
+    elif risk_counts["Medium"] > 5: risk = "Medium"
+    else: risk = "Low"
 
     return {
         "total_files": total_files,
         "total_folders": total_folders,
         "hidden_files": hidden,
-        "temp_files": temp,
         "sensitive_files": sensitive,
         "max_depth": max_depth,
         "file_types": dict(file_types),
         "risk_level": risk,
-        "files": files_list[:50]
+        "file_details": file_details,
+        "risk_counts": risk_counts
     }

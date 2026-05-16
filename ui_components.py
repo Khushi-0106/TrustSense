@@ -26,7 +26,7 @@ def get_qr_base64(url):
 
 def get_passport_html(data):
     """
-    Generates the Neo-Brutalist 'Antigravity' Security Passport HTML.
+    Generates the premium 'Forensic' Security Passport HTML.
     """
     trust_score = data.get('trust_score', 100)
     device_id = data.get('device_id', 'TS-UNIT-01')
@@ -35,239 +35,237 @@ def get_passport_html(data):
     files_safe = data.get('files_safe', 145)
     sha_hash = data.get('hash', 'A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6')
     qr_base64 = data.get('qr_base64', '')
+    protocol = data.get('protocol', 'ADVANCED MULTI-PASS')
 
     html = f"""
     <!DOCTYPE html>
     <html lang="en">
     <head>
-        <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
         <style>
             :root {{
-                --bg: #1A1A1A;
-                --pastel-green: #B2F2BB;
-                --pastel-yellow: #FFF3BF;
-                --border-width: 4px;
+                --navy: #0f1c3a;
+                --gold: #c9a84c;
+                --parchment: #f8f5ec;
+                --parchment-dark: #eee9dc;
+                --white: #ffffff;
             }}
 
             body {{
-                background-color: var(--bg);
-                color: white;
-                font-family: 'Roboto Mono', monospace;
+                background-color: #0b1120;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                margin: 0;
                 padding: 20px;
-                margin: 0;
+                font-family: 'Inter', sans-serif;
             }}
 
-            .passport-container {{
-                border: 2px solid white;
-                background: var(--bg);
-                padding: 15px;
+            .passport {{
+                width: 100%;
+                max-width: 550px;
+                background-color: var(--parchment);
+                border: 2px solid var(--gold);
                 position: relative;
-                box-shadow: 5px 5px 0px white;
-                max-width: 500px;
-                margin: auto;
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+                overflow: hidden;
             }}
 
-            .header-box {{
-                background: var(--pastel-green);
-                color: black;
-                padding: 10px;
-                border: 2px solid black;
-                text-align: center;
-                margin-bottom: 15px;
-                animation: pulsate 2s infinite;
-                box-shadow: 4px 4px 0px white;
+            .header {{
+                background-color: var(--navy);
+                color: var(--white);
+                padding: 30px 25px;
+                border-bottom: 3px solid var(--gold);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
             }}
 
-            @keyframes pulsate {{
-                0% {{ box-shadow: 6px 6px 0px white; }}
-                50% {{ box-shadow: 12px 12px 0px white; }}
-                100% {{ box-shadow: 6px 6px 0px white; }}
-            }}
-
-            h1 {{
-                font-family: 'Archivo Black', sans-serif;
-                font-size: 1.2rem;
+            .header-title h1 {{
                 margin: 0;
+                font-size: 1.4rem;
+                letter-spacing: 1px;
+                color: var(--white);
+            }}
+
+            .header-title p {{
+                margin: 5px 0 0;
+                font-family: 'JetBrains Mono', monospace;
+                font-size: 0.7rem;
+                color: var(--gold);
                 text-transform: uppercase;
             }}
 
-            .identity-block {{
-                background: repeating-linear-gradient(
-                    45deg,
-                    var(--pastel-yellow),
-                    var(--pastel-yellow) 10px,
-                    #d4d600 10px,
-                    #d4d600 20px
-                );
-                color: black;
-                padding: 8px;
-                border: 2px solid black;
-                font-weight: bold;
-                margin-bottom: 12px;
-                font-size: 0.7rem;
-                box-shadow: 4px 4px 0px var(--pastel-green);
+            .doc-num {{
+                text-align: right;
+                font-family: 'JetBrains Mono', monospace;
             }}
 
-            .identity-content {{
-                background: white;
-                padding: 10px;
-                border: 2px solid black;
-                display: inline-block;
+            .doc-num span {{
+                display: block;
+                font-size: 0.6rem;
+                color: var(--gold);
             }}
 
-            .ledger-grid {{
+            .doc-num strong {{
+                font-size: 1rem;
+                color: var(--gold);
+            }}
+
+            .content {{
+                padding: 25px;
+            }}
+
+            .grid {{
                 display: grid;
                 grid-template-columns: 1fr 1fr;
                 gap: 20px;
                 margin-bottom: 25px;
             }}
 
-            .ledger-item {{
-                border: 2px solid white;
-                padding: 8px;
-                box-shadow: 3px 3px 0px var(--pastel-yellow);
-            }}
-
-            .ledger-label {{
-                font-size: 0.8rem;
-                color: #aaa;
+            .label {{
+                font-size: 0.65rem;
+                font-weight: 700;
+                color: #6b7280;
                 text-transform: uppercase;
+                margin-bottom: 4px;
             }}
 
-            .ledger-value {{
-                font-size: 1rem;
-                font-weight: bold;
-                color: var(--pastel-green);
+            .value {{
+                font-size: 1.1rem;
+                font-weight: 700;
+                color: var(--navy);
             }}
 
-            .wipe-protocol {{
-                border: 2px dashed var(--pastel-green);
-                padding: 10px;
-                margin-bottom: 12px;
-                font-size: 0.7rem;
+            .stat-box {{
+                background: var(--parchment-dark);
+                border: 1px solid rgba(15, 28, 58, 0.1);
+                padding: 15px;
+                border-radius: 4px;
             }}
 
-            .trust-score-box {{
-                position: absolute;
-                top: -10px;
-                right: -10px;
-                background: var(--bg);
-                border: 2px solid var(--pastel-green);
-                padding: 10px;
-                box-shadow: 4px 4px 0px var(--pastel-yellow);
-                transform: rotate(5deg);
-                z-index: 10;
-            }}
-
-            .score-value {{
-                font-family: 'Archivo Black', sans-serif;
-                font-size: 1.5rem;
-                color: var(--pastel-green);
+            .protocol-bar {{
+                border: 1px dashed var(--gold);
+                padding: 15px;
+                margin-bottom: 25px;
                 position: relative;
             }}
 
-            /* Glitch Effect */
-            .glitch {{
-                position: relative;
-            }}
-            .glitch::before, .glitch::after {{
-                content: attr(data-text);
+            .protocol-title {{
                 position: absolute;
-                top: 0; left: 0; width: 100%; height: 100%;
-                background: var(--bg);
-            }}
-            .glitch::before {{
-                left: 2px;
-                text-shadow: -2px 0 #ff00c1;
-                clip: rect(44px, 450px, 56px, 0);
-                animation: glitch-anim 5s infinite linear alternate-reverse;
-            }}
-            .glitch::after {{
-                left: -2px;
-                text-shadow: -2px 0 #00fff9, 2px 2px #ff00c1;
-                animation: glitch-anim2 1s infinite linear alternate-reverse;
-            }}
-
-            @keyframes glitch-anim {{
-                0% {{ clip: rect(31px, 9999px, 94px, 0); }}
-                20% {{ clip: rect(62px, 9999px, 42px, 0); }}
-                40% {{ clip: rect(16px, 9999px, 78px, 0); }}
-                60% {{ clip: rect(58px, 9999px, 43px, 0); }}
-                80% {{ clip: rect(23px, 9999px, 98px, 0); }}
-                100% {{ clip: rect(82px, 9999px, 31px, 0); }}
-            }}
-
-            @keyframes glitch-anim2 {{
-                0% {{ clip: rect(65px, 9999px, 100px, 0); }}
-                20% {{ clip: rect(30px, 9999px, 20px, 0); }}
-                40% {{ clip: rect(15px, 9999px, 85px, 0); }}
-                60% {{ clip: rect(50px, 9999px, 40px, 0); }}
-                80% {{ clip: rect(25px, 9999px, 95px, 0); }}
-                100% {{ clip: rect(80px, 9999px, 35px, 0); }}
-            }}
-
-            .footer-hash {{
-                background: var(--pastel-yellow);
-                color: black;
-                padding: 5px;
+                top: -8px;
+                left: 15px;
+                background: var(--parchment);
+                padding: 0 8px;
                 font-size: 0.6rem;
-                word-break: break-all;
-                border: 1px solid black;
-                margin-top: 12px;
+                font-weight: 700;
+                color: var(--gold);
             }}
 
-            .qr-image {{
-                width: 100px;
-                height: 100px;
-                border: 2px solid white;
-                float: left;
-                margin-right: 20px;
+            .footer {{
+                background: var(--parchment-dark);
+                padding: 15px 25px;
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                border-top: 1px solid rgba(15, 28, 58, 0.1);
+            }}
+
+            .qr-code {{
+                width: 80px;
+                height: 80px;
+                border: 1px solid var(--navy);
+                background: white;
+                padding: 4px;
+            }}
+
+            .mrz {{
+                font-family: 'JetBrains Mono', monospace;
+                font-size: 0.65rem;
+                color: #9ca3af;
+                flex-grow: 1;
+                letter-spacing: 1px;
+            }}
+
+            .trust-seal {{
+                position: absolute;
+                top: 80px;
+                right: 25px;
+                width: 90px;
+                height: 90px;
+                border: 2px solid rgba(15, 28, 58, 0.1);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                font-size: 0.5rem;
+                font-weight: 700;
+                color: rgba(15, 28, 58, 0.3);
+                transform: rotate(15deg);
             }}
         </style>
     </head>
     <body>
-        <div class="passport-container">
-            <div class="trust-score-box">
-                <div class="score-value glitch" data-text="{trust_score}/100">{trust_score}/100</div>
-            </div>
-
-            <div class="header-box">
-                <h1>TRUSTSENSE+ SECURITY PASSPORT</h1>
-            </div>
-
-            <div class="identity-block">
-                <div class="identity-content">
-                    DEVICE ID: {device_id} | DATE: {date}
+        <div class="passport">
+            <div class="header">
+                <div class="header-title">
+                    <h1>SECURITY PASSPORT</h1>
+                    <p>TrustSense Forensic Authority</p>
+                </div>
+                <div class="doc-num">
+                    <span>CERTIFICATE ID</span>
+                    <strong>{sha_hash[:12].upper()}</strong>
                 </div>
             </div>
 
-            <div class="ledger-grid">
-                <div class="ledger-item">
-                    <div class="ledger-label">Sensitive Files</div>
-                    <div class="ledger-value">{files_sensitive}</div>
+            <div class="content">
+                <div class="trust-seal">VERIFIED<br>SECURE<br>AUTHENTIC</div>
+                
+                <div class="grid">
+                    <div>
+                        <div class="label">DEVICE IDENTITY</div>
+                        <div class="value">{device_id}</div>
+                    </div>
+                    <div>
+                        <div class="label">TRUST SCORE</div>
+                        <div class="value" style="color: #16a34a;">{trust_score}%</div>
+                    </div>
+                    <div>
+                        <div class="label">ISSUANCE DATE</div>
+                        <div class="value">{date}</div>
+                    </div>
+                    <div>
+                        <div class="label">FILES PURGED</div>
+                        <div class="value">{files_sensitive + files_safe}</div>
+                    </div>
                 </div>
-                <div class="ledger-item">
-                    <div class="ledger-label">Safe Files</div>
-                    <div class="ledger-value">{files_safe}</div>
+
+                <div class="protocol-bar">
+                    <span class="protocol-title">FORENSIC PROTOCOL</span>
+                    <div style="font-size: 0.9rem; font-weight: 700; color: var(--navy);">{protocol}</div>
+                    <div style="font-size: 0.6rem; color: #6b7280; margin-top: 4px;">Verified Cryptographic Zero-Bit Eradication Sequence</div>
+                </div>
+
+                <div class="grid">
+                    <div class="stat-box">
+                        <div class="label">THREATS NEUTRALIZED</div>
+                        <div class="value" style="color: #dc2626;">{files_sensitive}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="label">INTEGRITY STATUS</div>
+                        <div class="value" style="color: #16a34a;">VERIFIED</div>
+                    </div>
                 </div>
             </div>
 
-            <div class="wipe-protocol">
-                <div class="ledger-label">WIPE PROTOCOL</div>
-                <div style="font-size: 1.2rem; color: var(--pastel-green); font-weight: bold;">[ DOD-5220.22-M ] MULTI-PASS OVERWRITE</div>
-                <p style="font-size: 0.8rem;">Status: Cryptographically Verified Zero-State</p>
-            </div>
-
-            <div style="overflow: hidden;">
-                <img class="qr-image" src="data:image/png;base64,{qr_base64}" alt="QR CODE" />
-                <div style="padding-top: 5px;">
-                    <p style="margin: 0; font-size: 0.7rem; font-weight: bold;">AUTHENTICITY GUARANTEED</p>
-                    <p style="margin: 0; font-size: 0.6rem; color: #888;">Legal forensic receipt of data sanitization.</p>
+            <div class="footer">
+                <img class="qr-code" src="data:image/png;base64,{qr_base64}" alt="QR">
+                <div class="mrz">
+                    P&lt;TSA{device_id.replace('-',''):<20}&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;<br>
+                    {sha_hash[:15].upper()}&lt;&lt;&lt;260516&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;
                 </div>
-            </div>
-
-            <div class="footer-hash">
-                SHA-256: {sha_hash}
             </div>
         </div>
     </body>
