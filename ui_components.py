@@ -26,7 +26,7 @@ def get_qr_base64(url):
 
 def get_passport_html(data):
     """
-    Generates the premium 'Forensic' Security Passport HTML.
+    Generates a Hyper-Premium 'Forensic' Security Passport HTML.
     """
     trust_score = data.get('trust_score', 100)
     device_id = data.get('device_id', 'TS-UNIT-01')
@@ -41,13 +41,14 @@ def get_passport_html(data):
     <!DOCTYPE html>
     <html lang="en">
     <head>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
         <style>
             :root {{
-                --navy: #0f1c3a;
-                --gold: #c9a84c;
-                --parchment: #f8f5ec;
-                --parchment-dark: #eee9dc;
+                --navy: #0a192f;
+                --gold: #c5a059;
+                --gold-bright: #e2c275;
+                --parchment: #fdfaf3;
+                --parchment-dark: #f1ebd8;
                 --white: #ffffff;
             }}
 
@@ -64,146 +65,212 @@ def get_passport_html(data):
 
             .passport {{
                 width: 100%;
-                max-width: 550px;
+                max-width: 580px;
                 background-color: var(--parchment);
-                border: 2px solid var(--gold);
+                border: 4px solid var(--gold);
                 position: relative;
-                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+                box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.7);
                 overflow: hidden;
+                background-image: 
+                    radial-gradient(var(--gold) 0.5px, transparent 0.5px);
+                background-size: 20px 20px;
+                background-position: 10px 10px;
+            }}
+
+            .passport::before {{
+                content: "";
+                position: absolute;
+                top: 0; left: 0; width: 100%; height: 100%;
+                background: linear-gradient(135deg, rgba(197, 160, 89, 0.05) 0%, transparent 50%, rgba(197, 160, 89, 0.05) 100%);
+                pointer-events: none;
             }}
 
             .header {{
                 background-color: var(--navy);
                 color: var(--white);
-                padding: 30px 25px;
-                border-bottom: 3px solid var(--gold);
+                padding: 40px 30px;
+                border-bottom: 5px solid var(--gold);
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                position: relative;
+            }}
+
+            .header::after {{
+                content: "OFFICIAL FORENSIC RECORD";
+                position: absolute;
+                bottom: 5px;
+                right: 30px;
+                font-size: 0.5rem;
+                letter-spacing: 2px;
+                color: var(--gold);
+                opacity: 0.8;
             }}
 
             .header-title h1 {{
                 margin: 0;
-                font-size: 1.4rem;
-                letter-spacing: 1px;
-                color: var(--white);
+                font-family: 'Cinzel', serif;
+                font-size: 1.8rem;
+                letter-spacing: 3px;
+                color: var(--gold-bright);
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
             }}
 
             .header-title p {{
                 margin: 5px 0 0;
                 font-family: 'JetBrains Mono', monospace;
-                font-size: 0.7rem;
-                color: var(--gold);
+                font-size: 0.75rem;
+                color: var(--white);
                 text-transform: uppercase;
+                letter-spacing: 4px;
+                opacity: 0.9;
             }}
 
             .doc-num {{
                 text-align: right;
                 font-family: 'JetBrains Mono', monospace;
+                border-left: 1px solid var(--gold);
+                padding-left: 20px;
             }}
 
             .doc-num span {{
                 display: block;
                 font-size: 0.6rem;
-                color: var(--gold);
+                color: var(--gold-bright);
+                opacity: 0.8;
             }}
 
             .doc-num strong {{
-                font-size: 1rem;
-                color: var(--gold);
+                font-size: 1.1rem;
+                color: var(--white);
             }}
 
             .content {{
-                padding: 25px;
-            }}
-
-            .grid {{
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 20px;
-                margin-bottom: 25px;
-            }}
-
-            .label {{
-                font-size: 0.65rem;
-                font-weight: 700;
-                color: #6b7280;
-                text-transform: uppercase;
-                margin-bottom: 4px;
-            }}
-
-            .value {{
-                font-size: 1.1rem;
-                font-weight: 700;
-                color: var(--navy);
-            }}
-
-            .stat-box {{
-                background: var(--parchment-dark);
-                border: 1px solid rgba(15, 28, 58, 0.1);
-                padding: 15px;
-                border-radius: 4px;
-            }}
-
-            .protocol-bar {{
-                border: 1px dashed var(--gold);
-                padding: 15px;
-                margin-bottom: 25px;
+                padding: 35px;
                 position: relative;
-            }}
-
-            .protocol-title {{
-                position: absolute;
-                top: -8px;
-                left: 15px;
-                background: var(--parchment);
-                padding: 0 8px;
-                font-size: 0.6rem;
-                font-weight: 700;
-                color: var(--gold);
-            }}
-
-            .footer {{
-                background: var(--parchment-dark);
-                padding: 15px 25px;
-                display: flex;
-                align-items: center;
-                gap: 20px;
-                border-top: 1px solid rgba(15, 28, 58, 0.1);
-            }}
-
-            .qr-code {{
-                width: 80px;
-                height: 80px;
-                border: 1px solid var(--navy);
-                background: white;
-                padding: 4px;
-            }}
-
-            .mrz {{
-                font-family: 'JetBrains Mono', monospace;
-                font-size: 0.65rem;
-                color: #9ca3af;
-                flex-grow: 1;
-                letter-spacing: 1px;
             }}
 
             .trust-seal {{
                 position: absolute;
-                top: 80px;
-                right: 25px;
-                width: 90px;
-                height: 90px;
-                border: 2px solid rgba(15, 28, 58, 0.1);
+                top: 20px;
+                right: 30px;
+                width: 120px;
+                height: 120px;
+                border: 2px double var(--gold);
                 border-radius: 50%;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 text-align: center;
-                font-size: 0.5rem;
+                font-family: 'Cinzel', serif;
+                font-size: 0.6rem;
                 font-weight: 700;
-                color: rgba(15, 28, 58, 0.3);
+                color: var(--gold);
                 transform: rotate(15deg);
+                background: rgba(197, 160, 89, 0.03);
+                box-shadow: inset 0 0 15px rgba(197, 160, 89, 0.1);
+                z-index: 5;
+            }}
+
+            .grid {{
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 25px;
+                margin-bottom: 30px;
+                position: relative;
+                z-index: 10;
+            }}
+
+            .label {{
+                font-size: 0.7rem;
+                font-weight: 700;
+                color: #4b5563;
+                text-transform: uppercase;
+                margin-bottom: 6px;
+                letter-spacing: 1px;
+            }}
+
+            .value {{
+                font-size: 1.2rem;
+                font-weight: 700;
+                color: var(--navy);
+                border-bottom: 1px solid var(--gold-bright);
+                padding-bottom: 2px;
+            }}
+
+            .protocol-bar {{
+                background: var(--navy);
+                color: var(--white);
+                padding: 20px;
+                margin-bottom: 30px;
+                border-left: 10px solid var(--gold);
+                box-shadow: 5px 5px 15px rgba(0,0,0,0.1);
+            }}
+
+            .protocol-bar div:first-child {{
+                font-size: 0.65rem;
+                color: var(--gold);
+                font-weight: bold;
+                margin-bottom: 5px;
+                text-transform: uppercase;
+            }}
+
+            .protocol-bar div:last-child {{
+                font-size: 1.1rem;
+                font-family: 'JetBrains Mono', monospace;
+                letter-spacing: 1px;
+            }}
+
+            .stat-container {{
+                display: flex;
+                gap: 20px;
+                margin-bottom: 30px;
+            }}
+
+            .stat-card {{
+                flex: 1;
+                background: var(--parchment-dark);
+                border: 1px solid var(--gold);
+                padding: 15px;
+                text-align: center;
+            }}
+
+            .stat-card .label {{ margin-bottom: 10px; color: var(--navy); }}
+            .stat-card .value {{ border: none; font-size: 1.5rem; }}
+
+            .footer {{
+                background-color: var(--parchment-dark);
+                padding: 25px 35px;
+                display: flex;
+                align-items: center;
+                gap: 30px;
+                border-top: 2px solid var(--gold);
+            }}
+
+            .qr-code {{
+                width: 90px;
+                height: 90px;
+                border: 2px solid var(--navy);
+                background: white;
+                padding: 5px;
+                box-shadow: 3px 3px 0px var(--gold);
+            }}
+
+            .mrz {{
+                font-family: 'JetBrains Mono', monospace;
+                font-size: 0.7rem;
+                color: #64748b;
+                line-height: 1.4;
+                letter-spacing: 2px;
+            }}
+
+            .hologram {{
+                position: absolute;
+                bottom: 10px;
+                right: 10px;
+                font-size: 2rem;
+                opacity: 0.1;
+                user-select: none;
             }}
         </style>
     </head>
@@ -212,50 +279,49 @@ def get_passport_html(data):
             <div class="header">
                 <div class="header-title">
                     <h1>SECURITY PASSPORT</h1>
-                    <p>TrustSense Forensic Authority</p>
+                    <p>TrustSense Forensic Node</p>
                 </div>
                 <div class="doc-num">
-                    <span>CERTIFICATE ID</span>
-                    <strong>{sha_hash[:12].upper()}</strong>
+                    <span>REGISTRY ID</span>
+                    <strong>{sha_hash[:16].upper()}</strong>
                 </div>
             </div>
 
             <div class="content">
-                <div class="trust-seal">VERIFIED<br>SECURE<br>AUTHENTIC</div>
+                <div class="trust-seal">TRUSTSENSE<br>AUTHENTIC<br>FORENSICALLY<br>CLEAN</div>
                 
                 <div class="grid">
                     <div>
-                        <div class="label">DEVICE IDENTITY</div>
+                        <div class="label">Hardware Identity</div>
                         <div class="value">{device_id}</div>
                     </div>
                     <div>
-                        <div class="label">TRUST SCORE</div>
-                        <div class="value" style="color: #16a34a;">{trust_score}%</div>
+                        <div class="label">Trust Integrity Score</div>
+                        <div class="value" style="color: #059669;">{trust_score}% CERTIFIED</div>
                     </div>
                     <div>
-                        <div class="label">ISSUANCE DATE</div>
+                        <div class="label">Certification Date</div>
                         <div class="value">{date}</div>
                     </div>
                     <div>
-                        <div class="label">FILES PURGED</div>
-                        <div class="value">{files_sensitive + files_safe}</div>
+                        <div class="label">Forensic Audit Result</div>
+                        <div class="value">CLEAN / ZERO-BIT</div>
                     </div>
                 </div>
 
                 <div class="protocol-bar">
-                    <span class="protocol-title">FORENSIC PROTOCOL</span>
-                    <div style="font-size: 0.9rem; font-weight: 700; color: var(--navy);">{protocol}</div>
-                    <div style="font-size: 0.6rem; color: #6b7280; margin-top: 4px;">Verified Cryptographic Zero-Bit Eradication Sequence</div>
+                    <div>Applied Eradication Protocol</div>
+                    <div>{protocol} (NIST 800-88)</div>
                 </div>
 
-                <div class="grid">
-                    <div class="stat-box">
-                        <div class="label">THREATS NEUTRALIZED</div>
+                <div class="stat-container">
+                    <div class="stat-card">
+                        <div class="label">THREATS PURGED</div>
                         <div class="value" style="color: #dc2626;">{files_sensitive}</div>
                     </div>
-                    <div class="stat-box">
-                        <div class="label">INTEGRITY STATUS</div>
-                        <div class="value" style="color: #16a34a;">VERIFIED</div>
+                    <div class="stat-card">
+                        <div class="label">TOTAL ASSETS</div>
+                        <div class="value">{files_sensitive + files_safe}</div>
                     </div>
                 </div>
             </div>
@@ -264,9 +330,10 @@ def get_passport_html(data):
                 <img class="qr-code" src="data:image/png;base64,{qr_base64}" alt="QR">
                 <div class="mrz">
                     P&lt;TSA{device_id.replace('-',''):<20}&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;<br>
-                    {sha_hash[:15].upper()}&lt;&lt;&lt;260516&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;
+                    {sha_hash[:20].upper()}&lt;&lt;&lt;&lt;&lt;260516&lt;&lt;&lt;&lt;
                 </div>
             </div>
+            <div class="hologram">🛡️</div>
         </div>
     </body>
     </html>
