@@ -128,9 +128,9 @@ def generate_neo_pdf(data):
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 @app.route('/api/certify', methods=['POST'])
+@app.route('/certify', methods=['POST'])
 def certify():
     data = request.json or {}
-    # Simulate a verifiable cryptographic response
     cert = {
         "id": hashlib.sha256(str(datetime.now().timestamp()).encode()).hexdigest()[:12],
         "hash": hashlib.sha256(data.get('device_id', 'TS-UNIT-01').encode()).hexdigest(),
@@ -139,6 +139,7 @@ def certify():
     return jsonify({"cert": cert})
 
 @app.route('/api/certificate', methods=['POST'])
+@app.route('/certificate', methods=['POST'])
 def certificate():
     data = request.json or {}
     try:
@@ -146,11 +147,13 @@ def certificate():
         pdf_base64 = base64.b64encode(pdf_bytes).decode()
         return jsonify({"pdf_base64": pdf_base64})
     except Exception as e:
+        print(f"CERT ERROR: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/scan', methods=['POST', 'GET'])
+@app.route('/scan', methods=['POST', 'GET'])
 def scan():
-    return jsonify({"status": "ready"})
+    return jsonify({"status": "ready", "engine": "TrustSense-v4.8"})
 
 if __name__ == "__main__":
     app.run(port=5000)
