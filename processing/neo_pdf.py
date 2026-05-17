@@ -56,9 +56,8 @@ def generate_neo_pdf(data):
 
     # 1. Header Block
     header_data = [
-        [Paragraph("Data Eradication Audit Report", style_title)],
-        [Paragraph("CERTIFICATE OF DESTRUCTION & FORENSIC COMPLIANCE", ParagraphStyle('Sub', fontName='Helvetica-Bold', fontSize=10, textColor=blue_600, spaceBefore=4))]
-    ]
+        [Paragraph("CERTIFICATE OF DESTRUCTION & FORENSIC COMPLIANCE", style_title)]
+    
     header_table = Table(header_data, colWidths=[doc.width])
     header_table.setStyle(TableStyle([
         ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
