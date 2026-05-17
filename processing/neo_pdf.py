@@ -181,7 +181,11 @@ def generate_neo_pdf(data):
     qr_img = qr.make_image(fill_color="#0F172A", back_color="#FFFFFF")
     
     qr_buffer = BytesIO()
-    qr_img.save(qr_buffer, format="PNG")
+    try:
+        qr_img.save(qr_buffer, format="PNG")
+    except TypeError:
+        # Fallback for PyPNGImage which doesn't accept format="PNG"
+        qr_img.save(qr_buffer)
     qr_buffer.seek(0)
     qr_reportlab = Image(qr_buffer, width=1.2*inch, height=1.2*inch)
     
