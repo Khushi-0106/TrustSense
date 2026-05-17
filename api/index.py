@@ -39,8 +39,7 @@ def scan():
     return jsonify({
         "results": results,
         "score": score_data["trust_score"],
-        "recommendation": recommendation_data["wipe_level"],
-        "ai_reason": recommendation_data["ai_reason"]
+        "recommendation": recommendation_data["wipe_level"]
     })
 
 @app.route('/api/certify', methods=['POST'])

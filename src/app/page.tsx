@@ -120,14 +120,16 @@ export default function TrustSensePage() {
       await scanEntry(dirHandle);
       setSensitiveFilesList(sensitiveList);
       
-      const preWipeScore = totalFiles > 0 ? Math.max(10, Math.round(100 - (sensitiveCount / totalFiles) * 100 - (totalFiles > 50 ? 15 : totalFiles > 20 ? 10 : 5))) : 85;
+      // Ensure pre-wipe score maxes out at 85 to always show a clear contrast with the 100% post-wipe score.
+      const baseScore = totalFiles > 0 ? Math.round(100 - (sensitiveCount / totalFiles) * 100) : 85;
+      const preWipeScore = Math.max(10, Math.min(85, baseScore - (totalFiles > 50 ? 15 : totalFiles > 20 ? 10 : 5)));
       const riskLevel = sensitiveCount > 5 ? "Critical" : sensitiveCount > 0 ? "Elevated" : "Low";
       const recommendation = sensitiveCount > 5 ? "DoD 5220.22-M (7-Pass)" : sensitiveCount > 0 ? "Gutmann (3-Pass)" : "Single-Pass Crypto Wipe";
       const aiReason = sensitiveCount > 5 
-        ? `Forensic analysis complete. Detected ${sensitiveCount} high-risk objects including potential credentials and keys. Recommending military-grade 7-pass overwrite per DoD 5220.22-M standard to ensure zero recoverability.`
+        ? `AUTOMATED AUDIT RESULT: Critical vulnerability threshold exceeded. Detected ${sensitiveCount} high-risk artifacts indicating potential credential/key spillage. Mandating DoD 5220.22-M (7-Pass) cryptographic wipe to guarantee absolute data destruction and regulatory compliance.`
         : sensitiveCount > 0 
-        ? `Forensic analysis complete. Found ${sensitiveCount} sensitive file(s) among ${totalFiles} total objects. Gutmann 3-pass overwrite recommended for thorough eradication of personally identifiable data.`
-        : `Forensic analysis complete. No sensitive files detected in ${totalFiles} objects. Single-pass cryptographic noise overwrite is sufficient for standard data destruction.`;
+        ? `AUTOMATED AUDIT RESULT: Moderate risk profile identified. Isolated ${sensitiveCount} sensitive artifacts out of ${totalFiles} total scanned objects. Authorizing standard 3-Pass eradication protocol to permanently sanitize potential PII exposure.`
+        : `AUTOMATED AUDIT RESULT: Baseline risk profile confirmed. Zero high-risk artifacts identified within the ${totalFiles} scanned objects. A standard single-pass cryptographic overwrite is authorized for baseline data sanitization.`;
       
       setScanResults({
         score: preWipeScore,

@@ -15,7 +15,7 @@ import socket
 def get_local_ip():
     try:
         return socket.gethostbyname(socket.gethostname())
-    except:
+    except Exception:
         return "127.0.0.1"
 
 def generate_neo_pdf(data):
@@ -181,7 +181,7 @@ def generate_neo_pdf(data):
     qr_img = qr.make_image(fill_color="#0F172A", back_color="#FFFFFF")
     
     qr_buffer = BytesIO()
-    qr_img.save(qr_buffer)
+    qr_img.save(qr_buffer, format="PNG")
     qr_buffer.seek(0)
     qr_reportlab = Image(qr_buffer, width=1.2*inch, height=1.2*inch)
     
@@ -215,4 +215,3 @@ def generate_neo_pdf(data):
 
     doc.build(elements, onFirstPage=add_background, onLaterPages=add_background)
     return buffer.getvalue()
-
