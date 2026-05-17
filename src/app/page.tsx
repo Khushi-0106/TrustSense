@@ -227,7 +227,7 @@ export default function TrustSensePage() {
               wipedCount++;
               
               addLog(`[ERADICATED] ${entry.name}`);
-              setProgress(Math.min(90, (wipedCount / scanResults.results.total_files) * 100));
+              setProgress(Math.min(90, Math.round((wipedCount / scanResults.results.total_files) * 100)));
             } catch (e) {
               addLog(`[FAILED] Could not eradicate ${entry.name}`);
               console.error(e);
@@ -262,7 +262,7 @@ export default function TrustSensePage() {
         else setProgressText(steps[3]);
         
         if (i % 25 === 0) addLog(steps[i/25] || "Finalizing...");
-        await new Promise(r => setTimeout(r, 20));
+        await new Promise(r => setTimeout(r, 6));
       }
     }
 
@@ -654,7 +654,7 @@ export default function TrustSensePage() {
                   <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
                   <span className="text-blue-400 font-bold uppercase text-xs tracking-wider">Eradication Protocol Active</span>
                 </div>
-                <span className="font-mono text-3xl font-bold text-white">{progress}%</span>
+                <span className="font-mono text-3xl font-bold text-white">{Math.round(progress)}%</span>
               </div>
               
               <div className="w-full h-4 bg-slate-800 rounded-full overflow-hidden border border-slate-700 mb-8 shadow-inner">
