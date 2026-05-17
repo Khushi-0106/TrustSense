@@ -57,6 +57,7 @@ def generate_neo_pdf(data):
     # 1. Header Block
     header_data = [
         [Paragraph("CERTIFICATE OF DESTRUCTION & FORENSIC COMPLIANCE", style_title)]
+    ]
     
     header_table = Table(header_data, colWidths=[doc.width])
     header_table.setStyle(TableStyle([

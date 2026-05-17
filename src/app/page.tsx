@@ -836,15 +836,18 @@ export default function TrustSensePage() {
               {/* Print styling injection */}
               <style dangerouslySetInnerHTML={{__html: `
                 @media print {
-                  body {
+                  html, body, .min-h-screen, main, #print-certificate {
                     background: white !important;
+                    background-color: white !important;
                     color: black !important;
                   }
-                  main > *:not(#print-certificate) {
-                    display: none !important;
+                  /* Hide all default layout blocks */
+                  body * {
+                    visibility: hidden !important;
                   }
-                  header, footer, .download-actions-row {
-                    display: none !important;
+                  /* Force only the certificate to be visible */
+                  #print-certificate, #print-certificate * {
+                    visibility: visible !important;
                   }
                   #print-certificate {
                     border: none !important;
