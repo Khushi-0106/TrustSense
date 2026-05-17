@@ -26,7 +26,7 @@ def get_qr_base64(url):
 
 def get_passport_html(data):
     """
-    Generates a Hyper-Premium 'Forensic' Security Passport HTML.
+    Generates the Neo-Brutalist 'Antigravity' Security Passport HTML.
     """
     trust_score = data.get('trust_score', 100)
     device_id = data.get('device_id', 'TS-UNIT-01')
@@ -35,305 +35,240 @@ def get_passport_html(data):
     files_safe = data.get('files_safe', 145)
     sha_hash = data.get('hash', 'A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6')
     qr_base64 = data.get('qr_base64', '')
-    protocol = data.get('protocol', 'ADVANCED MULTI-PASS')
 
     html = f"""
     <!DOCTYPE html>
     <html lang="en">
     <head>
-        <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
         <style>
             :root {{
-                --navy: #0a192f;
-                --gold: #c5a059;
-                --gold-bright: #e2c275;
-                --parchment: #fdfaf3;
-                --parchment-dark: #f1ebd8;
-                --white: #ffffff;
+                --bg: #1A1A1A;
+                --pastel-green: #B2F2BB;
+                --pastel-yellow: #FFF3BF;
+                --border-width: 4px;
             }}
 
             body {{
-                background-color: #0b1120;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                min-height: 100vh;
-                margin: 0;
+                background-color: var(--bg);
+                color: white;
+                font-family: 'Roboto Mono', monospace;
                 padding: 20px;
-                font-family: 'Inter', sans-serif;
-            }}
-
-            .passport {{
-                width: 100%;
-                max-width: 580px;
-                background-color: var(--parchment);
-                border: 4px solid var(--gold);
-                position: relative;
-                box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.7);
-                overflow: hidden;
-                background-image: 
-                    radial-gradient(var(--gold) 0.5px, transparent 0.5px);
-                background-size: 20px 20px;
-                background-position: 10px 10px;
-            }}
-
-            .passport::before {{
-                content: "";
-                position: absolute;
-                top: 0; left: 0; width: 100%; height: 100%;
-                background: linear-gradient(135deg, rgba(197, 160, 89, 0.05) 0%, transparent 50%, rgba(197, 160, 89, 0.05) 100%);
-                pointer-events: none;
-            }}
-
-            .header {{
-                background-color: var(--navy);
-                color: var(--white);
-                padding: 40px 30px;
-                border-bottom: 5px solid var(--gold);
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                position: relative;
-            }}
-
-            .header::after {{
-                content: "OFFICIAL FORENSIC RECORD";
-                position: absolute;
-                bottom: 5px;
-                right: 30px;
-                font-size: 0.5rem;
-                letter-spacing: 2px;
-                color: var(--gold);
-                opacity: 0.8;
-            }}
-
-            .header-title h1 {{
                 margin: 0;
-                font-family: 'Cinzel', serif;
-                font-size: 1.8rem;
-                letter-spacing: 3px;
-                color: var(--gold-bright);
-                text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
             }}
 
-            .header-title p {{
-                margin: 5px 0 0;
-                font-family: 'JetBrains Mono', monospace;
-                font-size: 0.75rem;
-                color: var(--white);
-                text-transform: uppercase;
-                letter-spacing: 4px;
-                opacity: 0.9;
-            }}
-
-            .doc-num {{
-                text-align: right;
-                font-family: 'JetBrains Mono', monospace;
-                border-left: 1px solid var(--gold);
-                padding-left: 20px;
-            }}
-
-            .doc-num span {{
-                display: block;
-                font-size: 0.6rem;
-                color: var(--gold-bright);
-                opacity: 0.8;
-            }}
-
-            .doc-num strong {{
-                font-size: 1.1rem;
-                color: var(--white);
-            }}
-
-            .content {{
-                padding: 35px;
+            .passport-container {{
+                border: 2px solid white;
+                background: var(--bg);
+                padding: 15px;
                 position: relative;
+                box-shadow: 5px 5px 0px white;
+                max-width: 500px;
+                margin: auto;
             }}
 
-            .trust-seal {{
-                position: absolute;
-                top: 20px;
-                right: 30px;
-                width: 120px;
-                height: 120px;
-                border: 2px double var(--gold);
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
+            .header-box {{
+                background: var(--pastel-green);
+                color: black;
+                padding: 10px;
+                border: 2px solid black;
                 text-align: center;
-                font-family: 'Cinzel', serif;
-                font-size: 0.6rem;
-                font-weight: 700;
-                color: var(--gold);
-                transform: rotate(15deg);
-                background: rgba(197, 160, 89, 0.03);
-                box-shadow: inset 0 0 15px rgba(197, 160, 89, 0.1);
-                z-index: 5;
+                margin-bottom: 15px;
+                animation: pulsate 2s infinite;
+                box-shadow: 4px 4px 0px white;
             }}
 
-            .grid {{
+            @keyframes pulsate {{
+                0% {{ box-shadow: 6px 6px 0px white; }}
+                50% {{ box-shadow: 12px 12px 0px white; }}
+                100% {{ box-shadow: 6px 6px 0px white; }}
+            }}
+
+            h1 {{
+                font-family: 'Archivo Black', sans-serif;
+                font-size: 1.2rem;
+                margin: 0;
+                text-transform: uppercase;
+            }}
+
+            .identity-block {{
+                background: repeating-linear-gradient(
+                    45deg,
+                    var(--pastel-yellow),
+                    var(--pastel-yellow) 10px,
+                    #d4d600 10px,
+                    #d4d600 20px
+                );
+                color: black;
+                padding: 8px;
+                border: 2px solid black;
+                font-weight: bold;
+                margin-bottom: 12px;
+                font-size: 0.7rem;
+                box-shadow: 4px 4px 0px var(--pastel-green);
+            }}
+
+            .identity-content {{
+                background: white;
+                padding: 10px;
+                border: 2px solid black;
+                display: inline-block;
+            }}
+
+            .ledger-grid {{
                 display: grid;
                 grid-template-columns: 1fr 1fr;
-                gap: 25px;
-                margin-bottom: 30px;
-                position: relative;
+                gap: 20px;
+                margin-bottom: 25px;
+            }}
+
+            .ledger-item {{
+                border: 2px solid white;
+                padding: 8px;
+                box-shadow: 3px 3px 0px var(--pastel-yellow);
+            }}
+
+            .ledger-label {{
+                font-size: 0.8rem;
+                color: #aaa;
+                text-transform: uppercase;
+            }}
+
+            .ledger-value {{
+                font-size: 1rem;
+                font-weight: bold;
+                color: var(--pastel-green);
+            }}
+
+            .wipe-protocol {{
+                border: 2px dashed var(--pastel-green);
+                padding: 10px;
+                margin-bottom: 12px;
+                font-size: 0.7rem;
+            }}
+
+            .trust-score-box {{
+                position: absolute;
+                top: -10px;
+                right: -10px;
+                background: var(--bg);
+                border: 2px solid var(--pastel-green);
+                padding: 10px;
+                box-shadow: 4px 4px 0px var(--pastel-yellow);
+                transform: rotate(5deg);
                 z-index: 10;
             }}
 
-            .label {{
-                font-size: 0.7rem;
-                font-weight: 700;
-                color: #4b5563;
-                text-transform: uppercase;
-                margin-bottom: 6px;
-                letter-spacing: 1px;
+            .score-value {{
+                font-family: 'Archivo Black', sans-serif;
+                font-size: 1.5rem;
+                color: var(--pastel-green);
+                position: relative;
             }}
 
-            .value {{
-                font-size: 1.2rem;
-                font-weight: 700;
-                color: var(--navy);
-                border-bottom: 1px solid var(--gold-bright);
-                padding-bottom: 2px;
+            /* Glitch Effect */
+            .glitch {{
+                position: relative;
             }}
-
-            .protocol-bar {{
-                background: var(--navy);
-                color: var(--white);
-                padding: 20px;
-                margin-bottom: 30px;
-                border-left: 10px solid var(--gold);
-                box-shadow: 5px 5px 15px rgba(0,0,0,0.1);
-            }}
-
-            .protocol-bar div:first-child {{
-                font-size: 0.65rem;
-                color: var(--gold);
-                font-weight: bold;
-                margin-bottom: 5px;
-                text-transform: uppercase;
-            }}
-
-            .protocol-bar div:last-child {{
-                font-size: 1.1rem;
-                font-family: 'JetBrains Mono', monospace;
-                letter-spacing: 1px;
-            }}
-
-            .stat-container {{
-                display: flex;
-                gap: 20px;
-                margin-bottom: 30px;
-            }}
-
-            .stat-card {{
-                flex: 1;
-                background: var(--parchment-dark);
-                border: 1px solid var(--gold);
-                padding: 15px;
-                text-align: center;
-            }}
-
-            .stat-card .label {{ margin-bottom: 10px; color: var(--navy); }}
-            .stat-card .value {{ border: none; font-size: 1.5rem; }}
-
-            .footer {{
-                background-color: var(--parchment-dark);
-                padding: 25px 35px;
-                display: flex;
-                align-items: center;
-                gap: 30px;
-                border-top: 2px solid var(--gold);
-            }}
-
-            .qr-code {{
-                width: 90px;
-                height: 90px;
-                border: 2px solid var(--navy);
-                background: white;
-                padding: 5px;
-                box-shadow: 3px 3px 0px var(--gold);
-            }}
-
-            .mrz {{
-                font-family: 'JetBrains Mono', monospace;
-                font-size: 0.7rem;
-                color: #64748b;
-                line-height: 1.4;
-                letter-spacing: 2px;
-            }}
-
-            .hologram {{
+            .glitch::before, .glitch::after {{
+                content: attr(data-text);
                 position: absolute;
-                bottom: 10px;
-                right: 10px;
-                font-size: 2rem;
-                opacity: 0.1;
-                user-select: none;
+                top: 0; left: 0; width: 100%; height: 100%;
+                background: var(--bg);
+            }}
+            .glitch::before {{
+                left: 2px;
+                text-shadow: -2px 0 #ff00c1;
+                clip: rect(44px, 450px, 56px, 0);
+                animation: glitch-anim 5s infinite linear alternate-reverse;
+            }}
+            .glitch::after {{
+                left: -2px;
+                text-shadow: -2px 0 #00fff9, 2px 2px #ff00c1;
+                animation: glitch-anim2 1s infinite linear alternate-reverse;
+            }}
+
+            @keyframes glitch-anim {{
+                0% {{ clip: rect(31px, 9999px, 94px, 0); }}
+                20% {{ clip: rect(62px, 9999px, 42px, 0); }}
+                40% {{ clip: rect(16px, 9999px, 78px, 0); }}
+                60% {{ clip: rect(58px, 9999px, 43px, 0); }}
+                80% {{ clip: rect(23px, 9999px, 98px, 0); }}
+                100% {{ clip: rect(82px, 9999px, 31px, 0); }}
+            }}
+
+            @keyframes glitch-anim2 {{
+                0% {{ clip: rect(65px, 9999px, 100px, 0); }}
+                20% {{ clip: rect(30px, 9999px, 20px, 0); }}
+                40% {{ clip: rect(15px, 9999px, 85px, 0); }}
+                60% {{ clip: rect(50px, 9999px, 40px, 0); }}
+                80% {{ clip: rect(25px, 9999px, 95px, 0); }}
+                100% {{ clip: rect(80px, 9999px, 35px, 0); }}
+            }}
+
+            .footer-hash {{
+                background: var(--pastel-yellow);
+                color: black;
+                padding: 5px;
+                font-size: 0.6rem;
+                word-break: break-all;
+                border: 1px solid black;
+                margin-top: 12px;
+            }}
+
+            .qr-image {{
+                width: 100px;
+                height: 100px;
+                border: 2px solid white;
+                float: left;
+                margin-right: 20px;
             }}
         </style>
     </head>
     <body>
-        <div class="passport">
-            <div class="header">
-                <div class="header-title">
-                    <h1>SECURITY PASSPORT</h1>
-                    <p>TrustSense Forensic Node</p>
-                </div>
-                <div class="doc-num">
-                    <span>REGISTRY ID</span>
-                    <strong>{sha_hash[:16].upper()}</strong>
+        <div class="passport-container">
+            <div class="trust-score-box">
+                <div class="score-value glitch" data-text="{trust_score}/100">{trust_score}/100</div>
+            </div>
+
+            <div class="header-box">
+                <h1>TRUSTSENSE+ SECURITY PASSPORT</h1>
+            </div>
+
+            <div class="identity-block">
+                <div class="identity-content">
+                    DEVICE ID: {device_id} | DATE: {date}
                 </div>
             </div>
 
-            <div class="content">
-                <div class="trust-seal">TRUSTSENSE<br>AUTHENTIC<br>FORENSICALLY<br>CLEAN</div>
-                
-                <div class="grid">
-                    <div>
-                        <div class="label">Hardware Identity</div>
-                        <div class="value">{device_id}</div>
-                    </div>
-                    <div>
-                        <div class="label">Trust Integrity Score</div>
-                        <div class="value" style="color: #059669;">{trust_score}% CERTIFIED</div>
-                    </div>
-                    <div>
-                        <div class="label">Certification Date</div>
-                        <div class="value">{date}</div>
-                    </div>
-                    <div>
-                        <div class="label">Forensic Audit Result</div>
-                        <div class="value">CLEAN / ZERO-BIT</div>
-                    </div>
+            <div class="ledger-grid">
+                <div class="ledger-item">
+                    <div class="ledger-label">Sensitive Files</div>
+                    <div class="ledger-value">{files_sensitive}</div>
                 </div>
-
-                <div class="protocol-bar">
-                    <div>Applied Eradication Protocol</div>
-                    <div>{protocol} (NIST 800-88)</div>
-                </div>
-
-                <div class="stat-container">
-                    <div class="stat-card">
-                        <div class="label">THREATS PURGED</div>
-                        <div class="value" style="color: #dc2626;">{files_sensitive}</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="label">TOTAL ASSETS</div>
-                        <div class="value">{files_sensitive + files_safe}</div>
-                    </div>
+                <div class="ledger-item">
+                    <div class="ledger-label">Safe Files</div>
+                    <div class="ledger-value">{files_safe}</div>
                 </div>
             </div>
 
-            <div class="footer">
-                <img class="qr-code" src="data:image/png;base64,{qr_base64}" alt="QR">
-                <div class="mrz">
-                    P&lt;TSA{device_id.replace('-',''):<20}&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;<br>
-                    {sha_hash[:20].upper()}&lt;&lt;&lt;&lt;&lt;260516&lt;&lt;&lt;&lt;
+            <div class="wipe-protocol">
+                <div class="ledger-label">WIPE PROTOCOL</div>
+                <div style="font-size: 1.2rem; color: var(--pastel-green); font-weight: bold;">[ DOD-5220.22-M ] MULTI-PASS OVERWRITE</div>
+                <p style="font-size: 0.8rem;">Status: Cryptographically Verified Zero-State</p>
+            </div>
+
+            <div style="overflow: hidden;">
+                <img class="qr-image" src="data:image/png;base64,{qr_base64}" alt="QR CODE" />
+                <div style="padding-top: 5px;">
+                    <p style="margin: 0; font-size: 0.7rem; font-weight: bold;">AUTHENTICITY GUARANTEED</p>
+                    <p style="margin: 0; font-size: 0.6rem; color: #888;">Legal forensic receipt of data sanitization.</p>
                 </div>
             </div>
-            <div class="hologram">🛡️</div>
+
+            <div class="footer-hash">
+                SHA-256: {sha_hash}
+            </div>
         </div>
     </body>
     </html>

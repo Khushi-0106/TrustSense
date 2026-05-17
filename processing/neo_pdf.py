@@ -1,15 +1,16 @@
 import os
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, Flowable
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, Flowable, KeepTogether
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.graphics.barcode import code128
+from reportlab.graphics.shapes import Drawing
+from reportlab.graphics.charts.piecharts import Pie
 from datetime import datetime
 import qrcode
 from io import BytesIO
 import socket
-
 
 def get_local_ip():
     try:
@@ -17,198 +18,201 @@ def get_local_ip():
     except:
         return "127.0.0.1"
 
-def get_alpha_col(c, a):
-    """Helper to create a color with alpha since colors.rgba doesn't exist in ReportLab."""
-    return colors.Color(c.red, c.green, c.blue, alpha=a)
-
-
-# --- Palette ---
-NAVY        = colors.HexColor("#0f1c3a")
-NAVY_LIGHT  = colors.HexColor("#1a2744")
-GOLD        = colors.HexColor("#c9a84c")
-GOLD_LIGHT  = colors.HexColor("#f5d07a")
-PARCHMENT   = colors.HexColor("#f8f5ec")
-PARCHMENT_D = colors.HexColor("#eee9dc")
-RED         = colors.HexColor("#dc2626")
-RED_LIGHT   = colors.HexColor("#fee2e2")
-GREEN       = colors.HexColor("#16a34a")
-GREEN_LIGHT = colors.HexColor("#f0fdf4")
-WHITE       = colors.HexColor("#ffffff")
-GRAY        = colors.HexColor("#6b7280")
-GRAY_LIGHT  = colors.HexColor("#9ca3af")
-
-CHART_COLS = [
-    colors.HexColor("#0f1c3a"),
-    colors.HexColor("#c9a84c"),
-    colors.HexColor("#dc2626"),
-    colors.HexColor("#16a34a"),
-    colors.HexColor("#4f46e5"),
-    colors.HexColor("#ea580c"),
-    colors.HexColor("#0d9488"),
-    colors.HexColor("#e11d48"),
-]
-
-
 def generate_neo_pdf(data):
     """
-    Generates the navy/gold official passport PDF.
+    Generates a Professional Enterprise Data Eradication Audit Report.
     """
-    device_id    = data.get('device_id', 'TS-UNIT-01')
-    sha_hash     = data.get('hash', 'UNKNOWN_HASH')
-    trust_score  = data.get('trust_score', 100)
-    before_score = data.get('before_score', 0)
-    date         = data.get('date', datetime.now().strftime("%d/%m/%Y"))
-    files_sens   = data.get('files_sensitive', 0)
-    files_total  = data.get('files_safe', 0)
-    protocol     = data.get('protocol', 'Standard Overwrite')
-    risk_level   = data.get('risk_level', 'Low')
-    file_types   = data.get('file_types', {})
+    device_id = data.get('device_id', 'TS-UNIT-01')
+    sha_hash = data.get('hash', 'UNKNOWN_HASH')
+    trust_score = data.get('trust_score', 100)
+    date = data.get('date', datetime.now().strftime("%Y-%m-%d"))
+    files_sensitive = data.get('files_sensitive', 0)
+    files_safe = data.get('files_safe', 0)
+    file_types = data.get('file_types', {})
 
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(
-        buffer, pagesize=A4,
-        rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36
-    )
-    gold_strip = Table([['']], colWidths=[doc.width])
-    gold_strip.setStyle(TableStyle([('BACKGROUND', (0,0),(-1,-1), GOLD), ('TOPPADDING',(0,0),(-1,-1),3), ('BOTTOMPADDING',(0,0),(-1,-1),3)]))
+    # Enterprise Color Palette
+    bg_light = colors.HexColor("#F8FAFC")
+    bg_white = colors.HexColor("#FFFFFF")
+    text_slate_900 = colors.HexColor("#0F172A")
+    text_slate_500 = colors.HexColor("#64748B")
+    blue_600 = colors.HexColor("#2563EB")
+    emerald_500 = colors.HexColor("#10B981")
+    rose_500 = colors.HexColor("#F43F5E")
     
-    # ── Colors & Styles ────────────────────────────────────────────────────────
-    def sty(name, **kw): return ParagraphStyle(name, **kw)
-    s_tiny_gold  = sty('TG', fontName='Courier-Bold', fontSize=7, textColor=GOLD, leading=10)
-    s_title      = sty('TT', fontName='Helvetica-Bold', fontSize=22, textColor=WHITE, leading=26)
-    s_sub        = sty('TS', fontName='Courier-Bold', fontSize=9, textColor=GOLD, leading=12)
-    s_doc_no_val = sty('DV', fontName='Courier-Bold', fontSize=11, textColor=GOLD, alignment=2)
-    s_field_lbl  = sty('FL', fontName='Helvetica-Bold', fontSize=8, textColor=GRAY)
-    s_field_val  = sty('FV', fontName='Helvetica-Bold', fontSize=13, textColor=NAVY)
-    s_stat_num_r = sty('SNR', fontName='Helvetica-Bold', fontSize=28, textColor=RED, alignment=1)
-    s_stat_num_n = sty('SNN', fontName='Helvetica-Bold', fontSize=28, textColor=NAVY, alignment=1)
-    s_stat_num_g = sty('SNG', fontName='Helvetica-Bold', fontSize=28, textColor=colors.HexColor("#9a7a2a"), alignment=1)
-    s_stat_lbl   = sty('SL', fontName='Helvetica-Bold', fontSize=7, textColor=GRAY, alignment=1)
-    s_verified   = sty('VF',  fontName='Helvetica-Bold',fontSize=11, textColor=GREEN)
-    s_verified_s = sty('VS',  fontName='Helvetica',     fontSize=7,  textColor=GRAY)
-    s_sig        = sty('SG',  fontName='Times-Italic',  fontSize=12, textColor=GRAY_LIGHT)
-    s_sig_line   = sty('SGL', fontName='Courier-Bold',  fontSize=7,  textColor=GRAY_LIGHT)
-    s_valid_lbl  = sty('VL',  fontName='Courier-Bold',  fontSize=7,  textColor=GRAY_LIGHT, alignment=2)
-    s_valid_val  = sty('VV',  fontName='Helvetica-Bold',fontSize=11, textColor=NAVY, alignment=2)
-    s_mrz        = sty('MZ', fontName='Courier', fontSize=7, textColor=colors.HexColor("#9ca3af"))
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)
+    styles = getSampleStyleSheet()
 
-    W = doc.width
+    # Custom Styles
+    style_title = ParagraphStyle('Title', fontName='Helvetica-Bold', fontSize=24, textColor=text_slate_900, alignment=0)
+    style_subtitle = ParagraphStyle('Sub', fontName='Helvetica-Bold', fontSize=10, textColor=text_slate_500, alignment=0, spaceBefore=4, spaceAfter=20)
+    
+    style_label = ParagraphStyle('Label', fontName='Helvetica-Bold', fontSize=8, textColor=text_slate_500, leading=12)
+    style_value = ParagraphStyle('Value', fontName='Helvetica-Bold', fontSize=18, textColor=text_slate_900, leading=22)
+    
+    style_mono = ParagraphStyle('Mono', fontName='Courier-Bold', fontSize=10, textColor=text_slate_900, leading=14)
+
     elements = []
 
-    # ── GOLD HEADER STRIP ─────────────────────────────────────────────────────
-    elements.append(gold_strip)
-
-    # ── NAVY HEADER ──────────────────────────────────────────────────────────
-    title_block = [
-        [Paragraph("OFFICIAL SECURITY PASSPORT", s_tiny_gold)],
-        [Paragraph("Data Sanitization Certificate", s_title)],
-        [Paragraph("TRUSTSENSE FORENSIC AUTHORITY • VERIFIED SECURE", s_sub)],
+    # 1. Header Block
+    header_data = [
+        [Paragraph("Data Eradication Audit Report", style_title)],
+        [Paragraph("OFFICIAL CRYPTOGRAPHIC CERTIFICATE", style_subtitle)]
     ]
-    title_tbl = Table(title_block, colWidths=[W*0.7])
-    doc_no_tbl = Table([[Paragraph("CERTIFICATE ID", sty('DL', fontName='Courier-Bold', fontSize=7, textColor=GOLD, alignment=2))], [Paragraph(sha_hash[:14].upper(), s_doc_no_val)]], colWidths=[W*0.25])
-    
-    header_tbl = Table([[title_tbl, doc_no_tbl]], colWidths=[W*0.7, W*0.3])
-    header_tbl.setStyle(TableStyle([
-        ('VALIGN', (0,0),(-1,-1), 'MIDDLE'),
-        ('BACKGROUND',(0,0),(-1,-1), NAVY),
-        ('TOPPADDING',(0,0),(-1,-1),24),('BOTTOMPADDING',(0,0),(-1,-1),24),
-        ('LEFTPADDING',(0,0),(-1,-1),20),('RIGHTPADDING',(0,0),(-1,-1),20)
+    header_table = Table(header_data, colWidths=[doc.width])
+    header_table.setStyle(TableStyle([
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+        ('TOPPADDING', (0, 0), (-1, -1), 0),
     ]))
-    elements.append(header_tbl)
-    elements.append(gold_strip)
+    elements.append(header_table)
+    
+    # Divider
+    elements.append(Spacer(1, 10))
+    divider = Table([[""]], colWidths=[doc.width])
+    divider.setStyle(TableStyle([('LINEABOVE', (0,0), (-1,-1), 2, blue_600)]))
+    elements.append(divider)
+    elements.append(Spacer(1, 20))
 
-    # ── BODY ──────────────────────────────────────────────────────────────────
-    def space(h): return Table([['']], colWidths=[W], rowHeights=[h], style=[('BACKGROUND',(0,0),(-1,-1),PARCHMENT)])
-    elements.append(space(20))
-
-    # ── CREDENTIALS ──
-    cw = W / 4
-    c_labels = [Paragraph(l, s_field_lbl) for l in ["HOLDER / DEVICE ID", "ISSUANCE DATE", "PROTOCOL USED", "TRUST SCORE"]]
-    c_vals   = [Paragraph(device_id, s_field_val), Paragraph(date, s_field_val), Paragraph(protocol, s_field_val), Paragraph(f"{trust_score}%", s_field_val)]
-    c_tbl = Table([c_labels, c_vals], colWidths=[cw]*4)
-    c_tbl.setStyle(TableStyle([
-        ('BACKGROUND', (0,0),(-1,-1), PARCHMENT),
-        ('LINEBELOW', (0,1), (-1,1), 1.5, get_alpha_col(NAVY, 0.15)),
-        ('TOPPADDING', (0,0),(-1,-1), 5),('BOTTOMPADDING', (0,0),(-1,-1), 15),
-        ('LEFTPADDING', (0,0),(-1,-1), 20)
+    # 2. Barcode & ID Strip
+    barcode = code128.Code128(sha_hash[:16], barHeight=0.3*inch, barWidth=1.1)
+    
+    id_data = [
+        [Paragraph(f"<b>CERT ID:</b> {sha_hash[:16]}<br/><b>TARGET:</b> {device_id}", style_mono), barcode]
+    ]
+    id_table = Table(id_data, colWidths=[doc.width/2, doc.width/2])
+    id_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+        ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('BACKGROUND', (0, 0), (-1, -1), bg_light),
+        ('BOX', (0, 0), (-1, -1), 1, colors.HexColor("#E2E8F0")),
+        ('PADDING', (0, 0), (-1, -1), 10),
     ]))
-    elements.append(c_tbl)
-    elements.append(space(25))
+    elements.append(id_table)
+    elements.append(Spacer(1, 30))
 
-    # ── RISK DISTRIBUTION GRAPH ──
-    risk_counts = data.get('risk_counts', {"High": 0, "Medium": 0, "Low": 0, "Hidden": 0})
-    elements.append(Table([[Paragraph("FORENSIC RISK CATEGORIZATION", s_field_lbl)]], colWidths=[W], style=[('BACKGROUND',(0,0),(-1,-1),PARCHMENT),('LEFTPADDING',(0,0),(-1,-1),20)]))
+    # 3. Core Metrics Grid
+    def metric_box(label, value, color):
+        return Table(
+            [[Paragraph(label, style_label)], [Paragraph(str(value), ParagraphStyle('V', fontName='Helvetica-Bold', fontSize=24, textColor=color))]],
+            colWidths=[doc.width/2.1]
+        )
+
+    metrics_data = [
+        [metric_box("VULNERABILITIES PURGED", files_sensitive, rose_500), metric_box("TOTAL OBJECTS ERADICATED", files_safe + files_sensitive, text_slate_900)]
+    ]
+    metrics_table = Table(metrics_data, colWidths=[doc.width/2, doc.width/2])
+    metrics_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    elements.append(metrics_table)
+    elements.append(Spacer(1, 30))
     
-    # Simple Bar Chart inside PDF
-    max_count = max(risk_counts.values()) if any(risk_counts.values()) else 1
-    bar_w_total = W - 40
-    
-    risk_entries = [("HIGH RISK", risk_counts["High"], RED), ("MEDIUM RISK", risk_counts["Medium"], colors.HexColor("#ea580c")), ("LOW RISK", risk_counts["Low"], GREEN), ("HIDDEN ASSETS", risk_counts["Hidden"], NAVY)]
-    
-    chart_cells = []
-    for lbl, count, col in risk_entries:
-        fill_w = max(5, (count / max_count) * (bar_w_total - 100))
-        bar = Table([['']], colWidths=[fill_w], rowHeights=[12], style=[('BACKGROUND',(0,0),(-1,-1),col),('ROUNDEDCORNERS',(0,0),(-1,-1),2)])
-        row = [Paragraph(lbl, sty('RL', fontName='Helvetica-Bold', fontSize=7, textColor=GRAY)), bar, Paragraph(str(count), sty('RC', fontName='Courier-Bold', fontSize=8, textColor=NAVY))]
-        chart_cells.append(row)
+    # 3.5 Pie Chart for File Categories
+    if file_types:
+        d = Drawing(400, 150)
+        pc = Pie()
+        pc.x = 100
+        pc.y = 10
+        pc.width = 130
+        pc.height = 130
         
-    chart_tbl = Table(chart_cells, colWidths=[100, bar_w_total-140, 40])
-    chart_tbl.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,-1),PARCHMENT),('VALIGN',(0,0),(-1,-1),'MIDDLE'),('LEFTPADDING',(0,0),(-1,-1),20),('BOTTOMPADDING',(0,0),(-1,-1),8)]))
-    elements.append(chart_tbl)
-    elements.append(space(25))
+        # Extract data
+        categories = list(file_types.keys())
+        data_values = [file_types[cat] for cat in categories]
+        
+        # Handle empty data case
+        if sum(data_values) == 0:
+            data_values = [1]
+            categories = ["No Data"]
+            
+        pc.data = data_values
+        pc.labels = [f"{cat} ({val})" for cat, val in zip(categories, data_values)]
+        
+        # Colors corresponding to categories
+        color_map = {
+            'High Risk': rose_500,
+            'Hidden Data': text_slate_500,
+            'Low Risk': emerald_500
+        }
+        for i, cat in enumerate(categories):
+            pc.slices[i].fillColor = color_map.get(cat, blue_600)
+            pc.slices[i].fontName = 'Helvetica-Bold'
+            pc.slices[i].fontSize = 8
+            
+        d.add(pc)
+        
+        chart_table = Table(
+            [[Paragraph("DATA CATEGORIZATION", style_label)], [d]],
+            colWidths=[doc.width]
+        )
+        chart_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), bg_light),
+            ('BOX', (0, 0), (-1, -1), 1, colors.HexColor("#E2E8F0")),
+            ('PADDING', (0, 0), (-1, -1), 15),
+        ]))
+        elements.append(KeepTogether(chart_table))
+        elements.append(Spacer(1, 30))
 
-    # ── FINAL STATS ──
-    sw = (W - 50) / 3
-    def mk_stat(num, lbl, bg, bcol, tcol):
-        return Table([[Paragraph(str(num), tcol)], [Paragraph(lbl, s_stat_lbl)]], colWidths=[sw], style=[('BACKGROUND',(0,0),(-1,-1),bg),('BOX',(0,0),(-1,-1),1.2,bcol),('ROUNDEDCORNERS',(0,0),(-1,-1),6),('TOPPADDING',(0,0),(-1,-1),10),('BOTTOMPADDING',(0,0),(-1,-1),10)])
-    
-    stat_row = Table([[
-        mk_stat(files_sens, "SENSITIVE ERASED", RED_LIGHT, RED, s_stat_num_r),
-        mk_stat(files_total, "TOTAL FILES CLEARED", get_alpha_col(NAVY, 0.05), NAVY, s_stat_num_n),
-        mk_stat("100%", "INTEGRITY VERIFIED", get_alpha_col(GOLD, 0.1), GOLD, s_stat_num_g)
-    ]], colWidths=[sw+10]*3)
-    stat_row.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,-1),PARCHMENT),('ALIGN',(0,0),(-1,-1),'CENTER')]))
-    elements.append(stat_row)
-    elements.append(space(30))
-
-    # ── VERIFICATION SEAL ─────────────────────────────────────────────────────
-    v_left = [
-        [Paragraph("SECURITY VERIFICATION SUCCESSFUL", s_verified)],
-        [Paragraph("Forensic analysis confirms zero-bit data remnants across all physical sectors.", s_verified_s)]
+    # 4. Eradication Protocol Data
+    protocol_data = [
+        [Paragraph("PROTOCOL STANDARD", style_label), Paragraph("DoD 5220.22-M Wipe", style_mono)],
+        [Paragraph("VERIFIED INTEGRITY", style_label), Paragraph(f"100% SECURE", ParagraphStyle('VS', fontName='Helvetica-Bold', fontSize=14, textColor=emerald_500))],
+        [Paragraph("TIMESTAMP", style_label), Paragraph(date, style_mono)]
     ]
-    v_left_tbl = Table(v_left, colWidths=[W*0.7])
+    protocol_table = Table(protocol_data, colWidths=[doc.width*0.4, doc.width*0.6])
+    protocol_table.setStyle(TableStyle([
+        ('LINEBELOW', (0, 0), (-1, -2), 1, colors.HexColor("#E2E8F0")),
+        ('TOPPADDING', (0, 0), (-1, -1), 12),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    elements.append(protocol_table)
+    elements.append(Spacer(1, 40))
+
+    # 5. QR Code and Signature Block
+    local_ip = get_local_ip()
+    verify_url = f"http://{local_ip}:8501/?verify=true&id={device_id}&hash={sha_hash}"
+    qr = qrcode.QRCode(version=1, box_size=10, border=1)
+    qr.add_data(verify_url)
+    qr.make(fit=True)
+    qr_img = qr.make_image(fill_color="#0F172A", back_color="#FFFFFF")
     
-    seal_svg = Table([[Paragraph("VERIFIED<br/>SECURE", sty('SEAL', fontName='Helvetica-Bold', fontSize=6, textColor=get_alpha_col(NAVY, 0.4), alignment=1))]], colWidths=[0.85*inch], rowHeights=[0.85*inch], style=[('BACKGROUND', (0,0),(-1,-1), PARCHMENT), ('BOX', (0,0),(-1,-1), 1.5, get_alpha_col(NAVY, 0.1)), ('ROUNDEDCORNERS', (0,0),(-1,-1), 35), ('VALIGN', (0,0),(-1,-1), 'MIDDLE')])
+    qr_buffer = BytesIO()
+    qr_img.save(qr_buffer, format="PNG")
+    qr_buffer.seek(0)
+    qr_reportlab = Image(qr_buffer, width=1.2*inch, height=1.2*inch)
     
-    v_row = Table([[v_left_tbl, seal_svg]], colWidths=[W*0.75, W*0.25])
-    v_row.setStyle(TableStyle([('BACKGROUND', (0,0),(-1,-1), PARCHMENT), ('VALIGN', (0,0),(-1,-1), 'MIDDLE'), ('LINEABOVE', (0,0), (-1,-1), 1, get_alpha_col(NAVY, 0.1))]))
-    elements.append(v_row)
-    elements.append(space(15))
+    sig_data = [
+        [qr_reportlab, Paragraph("<i>TrustSense Enterprise</i><br/><br/>_______________________________<br/>AUTHORIZED SIGNATURE", ParagraphStyle('Sig', fontName='Times-Italic', fontSize=12, textColor=text_slate_500, alignment=1))]
+    ]
+    sig_table = Table(sig_data, colWidths=[doc.width*0.3, doc.width*0.7])
+    sig_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ALIGN', (1, 0), (1, 0), 'CENTER'),
+    ]))
+    elements.append(KeepTogether(sig_table))
 
-    # ── SIGNATURES ──
-    sig_data = [[
-        Table([[Paragraph("TrustSense Core Engine", s_sig)], [Paragraph("--------------------------", s_sig_line)], [Paragraph("DIGITAL AUTHORITY SIGNATURE", s_sig_line)]], colWidths=[W*0.6], style=[('LEFTPADDING',(0,0),(-1,-1),20)]),
-        Table([[Paragraph("ISSUANCE STAMP", s_valid_lbl)], [Paragraph(date, s_valid_val)]], colWidths=[W*0.3], style=[('ALIGN', (0,0),(-1,-1), 'RIGHT'), ('RIGHTPADDING', (0,0), (-1,-1), 20)])
-    ]]
-    s_row = Table(sig_data, colWidths=[W*0.65, W*0.35])
-    s_row.setStyle(TableStyle([('BACKGROUND', (0,0),(-1,-1), PARCHMENT), ('VALIGN', (0,0),(-1,-1), 'BOTTOM'), ('BOTTOMPADDING', (0,0), (-1,-1), 15)]))
-    elements.append(s_row)
-
-    # ── MRZ ──
-    m1 = f"P<TSA{device_id.replace('-',''):<30}{'<'*15}"[:44].replace('<', '&lt;')
-    m2 = f"{sha_hash.upper()[:9]}{'<'*9}260516{'<'*15}"[:44].replace('<', '&lt;')
-    mrz_tbl = Table([[Paragraph(m1, s_mrz)], [Paragraph(m2, s_mrz)]], colWidths=[W], style=[('BACKGROUND', (0,0),(-1,-1), PARCHMENT_D), ('LINEABOVE', (0,0), (-1,0), 0.5, get_alpha_col(NAVY, 0.1)), ('TOPPADDING', (0,0), (-1,-1), 8), ('BOTTOMPADDING', (0,0), (-1,-1), 8), ('LEFTPADDING', (0,0), (-1,-1), 20)])
-    elements.append(mrz_tbl)
-    elements.append(gold_strip)
-
-    def bg(canvas, doc):
+    # Page Background
+    def add_background(canvas, doc):
         canvas.saveState()
-        canvas.setFillColor(PARCHMENT)
+        canvas.setFillColor(bg_white)
         canvas.rect(0, 0, A4[0], A4[1], fill=1)
-        canvas.setStrokeColor(GOLD)
-        canvas.setLineWidth(2)
-        canvas.rect(12, 12, A4[0]-24, A4[1]-24) # Border
+        
+        # Elegant Outer Border
+        canvas.setStrokeColor(blue_600)
+        canvas.setLineWidth(1)
+        canvas.rect(20, 20, A4[0]-40, A4[1]-40)
+        
+        # Footer Hash
+        canvas.setFont("Courier", 8)
+        canvas.setFillColor(text_slate_500)
+        canvas.drawCentredString(A4[0]/2, 30, f"SHA-256 SIGNATURE: {sha_hash}")
+        
         canvas.restoreState()
 
-    doc.build(elements, onFirstPage=bg, onLaterPages=bg)
+    doc.build(elements, onFirstPage=add_background, onLaterPages=add_background)
     return buffer.getvalue()
+

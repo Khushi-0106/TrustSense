@@ -1,10 +1,6 @@
+/** @type {import('next').NextConfig} */
 const nextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  // Python API rewrites are handled in vercel.json for the production deployment
 };
 
 export default nextConfig;

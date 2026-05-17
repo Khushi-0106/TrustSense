@@ -1,15 +1,3 @@
 .vercel
 node_modules
 .next
-__pycache__/
-*.pyc
-cloud_storage/
-temp_backup/
-*.pdf
-*.png
-test_data/
-demo_files/
-tsconfig.tsbuildinfo
-.DS_Store
-.env
-.env.local
