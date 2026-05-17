@@ -11,7 +11,6 @@ import {
   Lock, 
   AlertTriangle,
   CheckCircle2,
-  CheckCircle2,
   Database,
   ArrowRight,
   FileCheck,
