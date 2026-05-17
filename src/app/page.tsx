@@ -464,7 +464,7 @@ export default function TrustSensePage() {
                     files: ["passwords.txt", "keys.pem", "config.env", "db_backup.sql"]
                   },
                   recommendation: "DoD 5220.22-M (7-Pass)",
-                  ai_reason: "Detected 8 high-risk objects including .pem keys, .env config, and credential files. Recommending military-grade 7-pass overwrite per DoD 5220.22-M standard to ensure zero recoverability."
+                  ai_reason: "AUTOMATED AUDIT RESULT: Critical vulnerability threshold exceeded. Detected 8 high-risk artifacts indicating potential credential/key spillage. Mandating DoD 5220.22-M (7-Pass) cryptographic wipe to guarantee absolute data destruction and regulatory compliance."
                 });
                 addLog("Sandbox ready. High entropy fragments detected.");
                 setStage("OPTIONS");
@@ -833,8 +833,36 @@ export default function TrustSensePage() {
                 </div>
               )}
 
+              {/* Print styling injection */}
+              <style dangerouslySetInnerHTML={{__html: `
+                @media print {
+                  body {
+                    background: white !important;
+                    color: black !important;
+                  }
+                  main > *:not(#print-certificate) {
+                    display: none !important;
+                  }
+                  header, footer, .download-actions-row {
+                    display: none !important;
+                  }
+                  #print-certificate {
+                    border: none !important;
+                    box-shadow: none !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    width: 100% !important;
+                    max-width: 100% !important;
+                    position: absolute !important;
+                    left: 0 !important;
+                    top: 0 !important;
+                  }
+                }
+              `}} />
+
               {/* Enterprise Audit Certificate */}
               <motion.div 
+                id="print-certificate"
                 initial={{ scale: 0.95, opacity: 0, rotateX: 10 }}
                 animate={{ scale: 1, opacity: 1, rotateX: 0 }}
                 transition={{ delay: 0.3, type: "spring", stiffness: 100 }}
@@ -921,19 +949,25 @@ export default function TrustSensePage() {
               </motion.div>
 
               {/* Download Actions */}
-              <div className="flex flex-col md:flex-row justify-center items-center gap-6 pt-4">
-                {pdfBase64 && (
-                  <motion.a 
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    href={`data:application/pdf;base64,${pdfBase64}`}
-                    download={`${deviceId}_Audit_Report.pdf`}
-                    className="flex items-center gap-3 bg-blue-600 text-white px-8 py-4 rounded-xl font-semibold tracking-wide shadow-lg hover:bg-blue-500 transition-colors"
-                  >
-                    <Download className="w-5 h-5" />
-                    Download Official PDF Report
-                  </motion.a>
-                )}
+              <div className="flex flex-col md:flex-row justify-center items-center gap-6 pt-4 download-actions-row">
+                <motion.button 
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    if (pdfBase64) {
+                      const link = document.createElement("a");
+                      link.href = `data:application/pdf;base64,${pdfBase64}`;
+                      link.download = `${deviceId}_Audit_Report.pdf`;
+                      link.click();
+                    } else {
+                      window.print();
+                    }
+                  }}
+                  className="flex items-center gap-3 bg-blue-600 text-white px-8 py-4 rounded-xl font-semibold tracking-wide shadow-lg hover:bg-blue-500 transition-colors"
+                >
+                  <Download className="w-5 h-5" />
+                  {pdfBase64 ? "Download Official PDF Report" : "Print Audit Certificate"}
+                </motion.button>
                 <button 
                   onClick={() => window.location.reload()}
                   className="px-8 py-4 border border-slate-700 rounded-xl font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
